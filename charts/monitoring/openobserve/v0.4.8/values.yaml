@@ -1,0 +1,98 @@
+# Default values for openobserve.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: public.ecr.aws/zinclabs/openobserve
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  # tag: "v0.4.7"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 2000
+  # If using local storage, a recursive chown is performed on every startup which can be slow
+  # Disable this with the OnRootMismatch policy
+  # See: https://kubernetes.io/blog/2020/12/14/kubernetes-release-1.20-fsgroupchangepolicy-fsgrouppolicy/
+  fsGroupChangePolicy: OnRootMismatch
+  runAsUser: 10000
+  runAsGroup: 3000
+  runAsNonRoot: true
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 4096m
+    memory: 2048Mi
+  requests:
+    cpu: 256m
+    memory: 50Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+auth:
+  # -- email address for root user
+  rootUserEmail: "admin@example.com"
+  # -- A random initial password will be set if left empty
+  initialPassword: ""
+
+storage:
+  dataDir: "/data"
+  volumeSize: "10Gi"
+  storageClassName: ""
+
+# -- Env vars for OpenObserve configuration
+# see https://github.com/openobserve/openobserve-helm-chart/blob/main/values.yaml#L70
+config:
+  # Object storage auth
+  ZO_S3_ACCESS_KEY: ""
+  ZO_S3_SECRET_KEY: ""
+  # ZO_S3_PROVIDER: "minio" # Need to set this up only if minio is being for object storage
+  ZO_S3_SERVER_URL: ""
+  ZO_S3_REGION_NAME: ""
+  ZO_S3_BUCKET_NAME: ""
