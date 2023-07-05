@@ -1,0 +1,17 @@
+  superuser-secret:
+    secretName: superuser-secret
+    secretKey: username
+    passwordSecretKey: password
+
+  app-secret:
+    secretName: app-secret
+    secretKey: username
+    passwordSecretKey: password
+
+  contabocredentials:
+    secretName: contabocredentials
+    secretKey: username
+    passwordSecretKey: password 
+
+  destinationpath: s3://pg-backup-test
+  endpointURL: https://eu2.contabostorage.com

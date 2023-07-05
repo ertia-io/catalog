@@ -1,0 +1,111 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitea-db-user-job # Name of the kubernetes job that creates the database
+spec:
+  template:
+    spec:
+      containers:
+        - name: pg-client # Container name in kubernetes, doesn't really matter
+          image: postgres:15  # Docker image to use, in the case latest postgres from docker hub, should probably have a fixed version. :latest, :14
+          
+          env:
+            - name: PGDATABASE # This env variable is used per default, by PSQL
+              value: postgres # Database name of default database, almost always "postgres" 
+            - name: PGHOST # This env variable is used per default, by PSQL
+              value: postgres-rw.postgres.svc.cluster.local # Database host. Easiest way to check is to check the services created by operator
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.secret.name }}
+                  key: {{ .Values.postgres.secret.usernameKey }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.secret.name }}
+                  key: {{ .Values.postgres.secret.passwordKey }}
+            - name: APPLICATIONUSER
+              valueFrom: 
+                secretKeyRef:
+                  name: "{{ .Values.secret.name }}"
+                  key: "{{ .Values.secret.usernameKey }}"
+            - name: APPLICATIONPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.secret.name }}"
+                  key: "{{ .Values.secret.passwordKey }}"
+          command: ["psql","-c", "CREATE ROLE $(APPLICATIONUSER) WITH LOGIN PASSWORD '$(APPLICATIONPASSWORD)'"]
+      restartPolicy: Never
+  backoffLimit: 10
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitea-db-job
+spec:
+  template:
+    spec:
+      containers:
+        - name: pg-client
+          image: postgres
+          env:
+            - name: PGDATABASE
+              value: postgres
+            - name: PGHOST
+              value: postgres-rw.postgres.svc.cluster.local
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.postgres.secret.name }}"
+                  key: "{{ .Values.postgres.secret.usernameKey }}"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.postgres.secret.name }}"
+                  key: "{{ .Values.postgres.secret.passwordKey }}"
+            - name: APPLICATIONUSER
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.secret.name }}"
+                  key: "{{ .Values.secret.usernameKey }}"
+            - name: APPLICATIONDB
+              value: "{{ .Values.database }}"
+          command: ["psql","-c", "CREATE DATABASE $(APPLICATIONDB) WITH OWNER $(APPLICATIONUSER)"]
+      restartPolicy: Never
+  backoffLimit: 10
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitea-db-grant-job
+spec:
+  template:
+    spec:
+      containers:
+        - name: pg-client
+          image: postgres
+          env:
+            - name: PGDATABASE
+              value: postgres
+            - name: PGHOST
+              value: postgres-rw.postgres.svc.cluster.local
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.postgres.secret.name }}"
+                  key: "{{ .Values.postgres.secret.usernameKey }}"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.postgres.secret.name }}"
+                  key: "{{ .Values.postgres.secret.passwordKey }}"
+            - name: APPLICATIONUSER
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.secret.name }}"
+                  key: "{{ .Values.secret.usernameKey }}"
+            - name: APPLICATIONDB
+              value: "{{ .Values.database }}"
+          command: ["psql","-c", "GRANT ALL PRIVILEGES ON DATABASE $(APPLICATIONDB) TO $(APPLICATIONUSER)"]
+      restartPolicy: Never
+  backoffLimit: 10

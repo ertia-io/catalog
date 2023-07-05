@@ -1,0 +1,46 @@
+# Example of PostgreSQL cluster
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: 3
+  primaryUpdateStrategy: unsupervised
+  storage:
+    size: 1Gi
+  monitoring:
+    enablePodMonitor: true 
+
+  superuserSecret:
+    name: superuser-secret
+  
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+         name: app-secret
+  backup:
+    barmanObjectStore:
+      destinationPath: {{ .Values.destinationpath }}
+      endpointURL: {{ .Values.endpointURL }}
+      s3Credentials:
+        accessKeyId:
+          name: contabocredentials
+          key: username
+        secretAccessKey:
+          name: contabocredentials
+          key: password
+
+          
+  # Example of rolling update strategy:
+  # - unsupervised: automated update of the primary once all
+  #                 replicas have been upgraded (default)
+  # - supervised: requires manual supervision to perform
+  #               the switchover of the primary   
+
+
+#  resources:
+#    storage:
+#      request: 1Gi
+#  replicas: 3
