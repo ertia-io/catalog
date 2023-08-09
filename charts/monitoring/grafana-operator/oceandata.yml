@@ -1,0 +1,10 @@
+persistence:
+  enabled: false
+
+deploymentStrategy:
+  type: Recreate
+
+grafana:
+  config:
+    server:
+      root_url: grafana.oceandata.xyz
