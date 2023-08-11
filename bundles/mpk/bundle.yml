@@ -173,8 +173,8 @@ deployments:
             cert: "tls.crt"
             key: "tls.key"
         cluster:
-          enabled: false
-          replicas: 1
+          enabled: true
+          replicas: 3
           noAdvertise: true
         natsbox:
           enabled: false
