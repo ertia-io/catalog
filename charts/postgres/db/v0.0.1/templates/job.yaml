@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ .Release.Name }}-user"
+  name: {{ .Release.Name }}-user
 spec:
   template:
     spec:
@@ -21,12 +21,12 @@ spec:
             - name: APPLICATIONUSER
               valueFrom: 
                 secretKeyRef:
-                  name: "{{ .Values.secret.name }}"
+                  name: "{{ .Release.Name }}"
                   key: username
             - name: APPLICATIONPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "{{ .Values.secret.name }}"
+                  name: "{{ .Release.Name }}"
                   key: password
           command: ["psql","-c", "CREATE ROLE $(APPLICATIONUSER) WITH LOGIN PASSWORD '$(APPLICATIONPASSWORD)'"]
       restartPolicy: Never
@@ -35,7 +35,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ .Release.Name }}-db"
+  name: {{ .Release.Name }}-db
 spec:
   template:
     spec:
@@ -54,12 +54,12 @@ spec:
             - name: APPLICATIONUSER
               valueFrom:
                 secretKeyRef: 
-                  name: "{{ .Values.secret.name }}"
+                  name: "{{ .Release.Name }}"
                   key: username
             - name: APPLICATIONDB
               valueFrom:
                 secretKeyRef: 
-                  name: "{{ .Values.secret.name }}"
+                  name: "{{ .Release.Name }}"
                   key: database
           command: ["psql","-c", "CREATE DATABASE $(APPLICATIONDB) WITH OWNER $(APPLICATIONUSER)"]
       restartPolicy: Never
@@ -68,7 +68,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ .Release.Name }}-grant"
+  name: {{ .Release.Name }}-grant
 spec:
   template:
     spec:
@@ -87,10 +87,13 @@ spec:
             - name: APPLICATIONUSER
               valueFrom:
                 secretKeyRef: 
-                  name: "{{ .Values.secret.name }}"
-                  key: "{{ .Values.secret.usernameKey }}"
+                  name: "{{ .Release.Name }}"
+                  key: username
             - name: APPLICATIONDB
-              value: "{{ .Values.database }}"
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Release.Name }}"
+                  key: database
           command: ["psql","-c", "GRANT ALL PRIVILEGES ON DATABASE $(APPLICATIONDB) TO $(APPLICATIONUSER)"]
       restartPolicy: Never
   backoffLimit: 10
