@@ -1,0 +1,10 @@
+secret:
+  username: ""
+  password: ""
+  database: ""
+
+postgres:
+  host: ""
+  database: ""
+  username: ""
+  password: ""

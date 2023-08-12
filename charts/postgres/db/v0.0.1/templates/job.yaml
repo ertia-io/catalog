@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gitea-db-user-job # Name of the kubernetes job that creates the database
+  name: "{{ .Release.Name }}-user"
 spec:
   template:
     spec:
@@ -11,29 +11,23 @@ spec:
           
           env:
             - name: PGDATABASE # This env variable is used per default, by PSQL
-              value: postgres # Database name of default database, almost always "postgres" 
+              value: {{ .Values.postgres.database }}
             - name: PGHOST # This env variable is used per default, by PSQL
-              value: postgres-rw.postgres.svc.cluster.local # Database host. Easiest way to check is to check the services created by operator
+              value: {{ .Values.postgres.host }}
             - name: PGUSER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgres.secret.name }}
-                  key: {{ .Values.postgres.secret.usernameKey }}
+              value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgres.secret.name }}
-                  key: {{ .Values.postgres.secret.passwordKey }}
+              value: {{ .Values.postgres.password }}
             - name: APPLICATIONUSER
               valueFrom: 
                 secretKeyRef:
                   name: "{{ .Values.secret.name }}"
-                  key: "{{ .Values.secret.usernameKey }}"
+                  key: username
             - name: APPLICATIONPASSWORD
               valueFrom:
                 secretKeyRef:
                   name: "{{ .Values.secret.name }}"
-                  key: "{{ .Values.secret.passwordKey }}"
+                  key: password
           command: ["psql","-c", "CREATE ROLE $(APPLICATIONUSER) WITH LOGIN PASSWORD '$(APPLICATIONPASSWORD)'"]
       restartPolicy: Never
   backoffLimit: 10
@@ -41,7 +35,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gitea-db-job
+  name: "{{ .Release.Name }}-db"
 spec:
   template:
     spec:
@@ -49,27 +43,24 @@ spec:
         - name: pg-client
           image: postgres
           env:
-            - name: PGDATABASE
-              value: postgres
-            - name: PGHOST
-              value: postgres-rw.postgres.svc.cluster.local
+            - name: PGDATABASE # This env variable is used per default, by PSQL
+              value: {{ .Values.postgres.database }}
+            - name: PGHOST # This env variable is used per default, by PSQL
+              value: {{ .Values.postgres.host }}
             - name: PGUSER
-              valueFrom:
-                secretKeyRef: 
-                  name: "{{ .Values.postgres.secret.name }}"
-                  key: "{{ .Values.postgres.secret.usernameKey }}"
+              value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef: 
-                  name: "{{ .Values.postgres.secret.name }}"
-                  key: "{{ .Values.postgres.secret.passwordKey }}"
+              value: {{ .Values.postgres.password }}
             - name: APPLICATIONUSER
               valueFrom:
                 secretKeyRef: 
                   name: "{{ .Values.secret.name }}"
-                  key: "{{ .Values.secret.usernameKey }}"
+                  key: username
             - name: APPLICATIONDB
-              value: "{{ .Values.database }}"
+              valueFrom:
+                secretKeyRef: 
+                  name: "{{ .Values.secret.name }}"
+                  key: database
           command: ["psql","-c", "CREATE DATABASE $(APPLICATIONDB) WITH OWNER $(APPLICATIONUSER)"]
       restartPolicy: Never
   backoffLimit: 10
@@ -77,7 +68,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gitea-db-grant-job
+  name: "{{ .Release.Name }}-grant"
 spec:
   template:
     spec:
@@ -85,20 +76,14 @@ spec:
         - name: pg-client
           image: postgres
           env:
-            - name: PGDATABASE
-              value: postgres
-            - name: PGHOST
-              value: postgres-rw.postgres.svc.cluster.local
+            - name: PGDATABASE # This env variable is used per default, by PSQL
+              value: {{ .Values.postgres.database }}
+            - name: PGHOST # This env variable is used per default, by PSQL
+              value: {{ .Values.postgres.host }}
             - name: PGUSER
-              valueFrom:
-                secretKeyRef: 
-                  name: "{{ .Values.postgres.secret.name }}"
-                  key: "{{ .Values.postgres.secret.usernameKey }}"
+              value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef: 
-                  name: "{{ .Values.postgres.secret.name }}"
-                  key: "{{ .Values.postgres.secret.passwordKey }}"
+              value: {{ .Values.postgres.password }}
             - name: APPLICATIONUSER
               valueFrom:
                 secretKeyRef: 
