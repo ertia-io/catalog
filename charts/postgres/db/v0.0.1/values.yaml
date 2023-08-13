@@ -5,6 +5,7 @@ secret:
 
 postgres:
   host: ""
+  port: ""
   database: ""
   username: ""
   password: ""
