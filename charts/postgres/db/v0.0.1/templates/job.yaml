@@ -15,7 +15,7 @@ spec:
             - name: PGHOST # This env variable is used per default, by PSQL
               value: {{ .Values.postgres.host }}
             - name: PGPORT
-              value: {{ .Values.postgres.port }}
+              value: "{{ .Values.postgres.port }}"
             - name: PGUSER
               value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
@@ -50,7 +50,7 @@ spec:
             - name: PGHOST # This env variable is used per default, by PSQL
               value: {{ .Values.postgres.host }}
             - name: PGPORT
-              value: {{ .Values.postgres.port }}
+              value: "{{ .Values.postgres.port }}"
             - name: PGUSER
               value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
@@ -85,7 +85,7 @@ spec:
             - name: PGHOST # This env variable is used per default, by PSQL
               value: {{ .Values.postgres.host }}
             - name: PGPORT
-              value: {{ .Values.postgres.port }}
+              value: "{{ .Values.postgres.port }}"
             - name: PGUSER
               value: {{ .Values.postgres.username }}
             - name: PGPASSWORD
