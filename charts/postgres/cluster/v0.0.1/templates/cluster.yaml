@@ -12,24 +12,25 @@ spec:
     enablePodMonitor: true 
 
   superuserSecret:
-    name: superuser-secret
+    name: {{ .Release.Name }}
   
-  bootstrap:
-    initdb:
-      database: app
-      owner: app
-      secret:
-         name: app-secret
+#  bootstrap:
+#    initdb:
+#      database: app
+#      owner: app
+#      secret:
+#         name: app-secret
   backup:
     barmanObjectStore:
-      destinationPath: {{ .Values.destinationpath }}
-      endpointURL: {{ .Values.endpointURL }}
+      destinationPath: {{ .Values.s3.destinationpath }}
+      endpointURL: {{ .Values.s3.endpointURL }}
       s3Credentials:
         accessKeyId:
+          name: {{ .Release.Name }}-s3
           name: contabocredentials
           key: username
         secretAccessKey:
-          name: contabocredentials
+          name: {{ .Release.Name }}-s3
           key: password
 
           
