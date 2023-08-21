@@ -1,0 +1,173 @@
+name: df-prod
+enabled: true
+version: 1.0.0
+deployments:
+  - name: cilium
+    type: helm
+    enabled: true
+    namespace: kube-system
+    uri: git+::https://github.com/ertia-io/catalog/charts/kube-system/cilium/v1.14.0-rc.0@main
+    values:
+      operator:
+        replicas: 1
+      k8sServiceHost: "{{ .MasterIP }}"
+      kubeProxyReplacement: strict
+      ingressController:
+        enabled: true
+        loadbalancerMode: shared
+        enforceHttps: false
+        service:
+          type: NodePort
+          insecureNodePort: 80
+          secureNodePort: 443
+      hostServices:
+        enabled: false
+      externalIPs:
+        enabled: true
+      nodePort:
+        enabled: true
+      hostPort:
+        enabled: true
+      image:
+        pullPolicy: IfNotPresent
+      ipam:
+        mode: kubernetes
+      hubble:
+        enabled: true
+        relay:
+          enabled: true
+      k8sServicePort: 6443 
+    
+      bgp:
+        enabled: false
+        announce:
+          loadbalancerIP: true
+          podCIDR: false
+    
+      bgpControlPlane:
+        enabled: false
+
+  - name: cert-manager
+    type: helm
+    enabled: true
+    namespace: cert-manager
+    uri: git+::https://github.com/ertia-io/catalog/charts/certs/cert-manager/v1.11.2@main
+    values:
+      installCRDs: true
+    timeout: 3m
+
+  - name: cert-issuers
+    type: helm
+    enabled: true
+    namespace: cert-manager
+    uri: git+::https://github.com/ertia-io/catalog/charts/certs/cert-issuers/v0.0.1@main
+    values:
+      letsencrypt:
+        enabled: true
+      zerossl:
+        enabled: true
+    requires:
+      - name: cert-manager
+        type: helm
+        namespace: cert-manager
+        timeout: 3m      
+
+  - name: openobserve
+    type: helm
+    enabled: true
+    namespace: monitoring
+    uri: git+::https://github.com/ertia-io/catalog/charts/monitoring/openobserve/v0.4.8@main
+    values:
+      auth:
+        initialPassword: "{{ .Secret \"openobserve.admin.password\" }}"
+        rootUserEmail: "platform@ertia.cloud"
+
+
+  - name: vector
+    type: helm
+    enabled: true
+    namespace: monitoring
+    uri: git+::https://github.com/ertia-io/catalog/charts/monitoring/vector/v0.29.1@main
+    values:
+      customConfig:
+        sources:
+          var_logs:
+            type: file
+            include:
+             - /kubelogs/**/*.log
+          internal_metrics:
+            type: internal_metrics
+          host_metrics:
+            type: host_metrics
+
+        sinks:
+          openobserve:
+            type: "http"
+            inputs:
+              - var_logs
+              - host_metrics
+            uri: "http://openobserve.monitoring.svc.cluster.local:80/api/default/default/_json"
+            method: "post"
+            auth:
+              strategy: "basic"
+              user: "platform@ertia.cloud"
+              password: "{{ .Secret \"openobserve.admin.password\" }}"
+            encoding:
+              codec: "json"
+              timestampFormat: "rfc3339"
+
+          prometheus:
+            type: prometheus_remote_write
+            inputs:
+              - host_metrics
+            endpoint: "http://openobserve.monitoring.svc.cluster.local:80/api/default/prometheus/api/v1/write"
+            auth:
+              strategy: "basic"
+              user: "platform@ertia.cloud"
+              password: "{{ .Secret \"openobserve.admin.password\" }}"
+      extraVolumes:
+        - name: varlogs
+          hostPath:
+            path: /var/log/
+      extraVolumeMounts:
+        - name: varlogs
+          mountPath: /kubelogs
+          readOnly: true
+      podMonitor:
+        enabled: true
+    requires:
+      - name: openobserve
+        type: helm
+        namespace: monitoring
+        timeout: 15m
+
+  - name: postgres-operator
+    type: helm
+    uri: git+::https://github.com/ertia-io/catalog/charts/postgres/cloudnative-pg/0.18.2@main
+    enabled: true
+    namespace: db
+
+  - name: postgres-cluster
+    namespace: db
+    type: helm
+    enabled: true
+    uri: git+::https://github.com/ertia-io/catalog/charts/postgres/cluster/v0.0.1@main
+    requires:
+      - name: postgres-operator
+        type: helm
+        namespace: db
+        timeout: 5m
+    values:
+      secret:
+        username: "postgres"
+        password: "{{ .Secret \"postgres.db.password\" }}"
+        database: "postgres"
+
+      s3:
+        destinationpath: s3://pg-backup
+        endpointURL: https://eu2.contabostorage.com
+        secret:
+          username: ""
+          password: ""
+
+
