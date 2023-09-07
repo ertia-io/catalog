@@ -147,6 +147,13 @@ deployments:
         namespace: monitoring
         timeout: 15m
 
+  - name: argo
+    type: helm
+    enabled: true
+    namespace: argo
+    uri: git+::https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd@main
+
+
   - name: nats
     type: helm
     enabled: true
