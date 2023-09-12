@@ -163,39 +163,21 @@ deployments:
       ertia:
         domain: "{{ .Domain }}"
       
-      nats:
-        nats:
-          jetstream:
-            enabled: true
-            memStorage:
-              enabled: true
-              size: 1Gi
-            fileStorage:
-              enabled: true
-              size: 10Gi
-          tls:
-            allowNonTLS: false
-            secret:
-              name: nats-client-tls
-            cert: "tls.crt"
-            key: "tls.key"
+      config:
         cluster:
           enabled: true
           replicas: 3
           noAdvertise: true
-        natsbox:
-          enabled: false
-        exporter:
+        jetstream:
           enabled: true
-          serviceMonitor:
+          memoryStore:
+            enable: true
+        nats:
+          tls:
             enabled: true
-            namespace: monitoring
-            labels:
-              release: monitoring
-            path: /metrics
-        auth:
-          enabled: true
-          token: "{{ .Secret \"nats.token\" }}"
-        networkPolicy:
-          enabled: true
-          allowExternal: true
+            secretName: nats-server-tls # TODO: add the Certificate creating this
+        merge:
+          authorization:
+            token: "{{ .Secret \"nats.token\" }}"
+      natsBox:
+        enabled: false
