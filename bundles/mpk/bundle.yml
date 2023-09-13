@@ -172,10 +172,6 @@ deployments:
           enabled: true
           memoryStore:
             enable: true
-        nats:
-          tls:
-            enabled: true
-            secretName: nats-server-tls # TODO: add the Certificate creating this
         merge:
           authorization:
             token: "{{ .Secret \"nats.token\" }}"
