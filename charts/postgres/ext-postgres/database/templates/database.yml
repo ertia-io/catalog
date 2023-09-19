@@ -1,0 +1,47 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: Postgres
+metadata:
+  name: {{ .Values.database }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  database: {{ .Values.database }}  # Name of database created in PostgreSQL
+  dropOnDelete: {{ .Values.dropOnDelete | default "false" }}  # Set to true if you want the operator to drop the database and role when this CR is deleted
+  masterRole: {{ .Values.database }}-group
+  schemas: {{ toYaml .Values.schemas | indent 4 }}
+
+---
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: {{ .Values.database }}-rw
+  namespace: {{ .Release.Namespace }}
+spec:
+  role: {{ .Values.username }}
+  database: {{ .Values.database }}
+  secretName: db-{{ .Values.database }}-rw
+  privileges: OWNER
+
+---
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: {{ .Values.database }}-wo
+  namespace: {{ .Release.Namespace }}
+spec:
+  role: {{ .Values.username }}
+  database: {{ .Values.database }}
+  secretName: db-{{ .Values.database }}-wo
+  privileges: WRITE
+
+---
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: {{ .Values.database }}-ro
+  namespace: db-{{ .Release.Namespace }}
+spec:
+  role: {{ .Values.username }}
+  database: {{ .Values.database }}
+  secretName: db-{{ .Values.database }}-ro
+  privileges: READ
+
