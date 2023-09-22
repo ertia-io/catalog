@@ -38,7 +38,7 @@ apiVersion: db.movetokube.com/v1alpha1
 kind: PostgresUser
 metadata:
   name: {{ .Values.database }}-ro
-  namespace: db-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   role: {{ .Values.username }}
   database: {{ .Values.database }}
