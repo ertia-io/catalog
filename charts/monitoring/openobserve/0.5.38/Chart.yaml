@@ -1,0 +1,20 @@
+apiVersion: v2
+appVersion: v0.5.2
+dependencies:
+- condition: etcd.enabled
+  name: etcd
+  repository: https://charts.bitnami.com/bitnami
+  version: 8.11.4
+- condition: minio.enabled
+  name: minio
+  repository: https://charts.min.io
+  version: 5.0.7
+description: A Helm chart for OpenObserve Observability platform (Logs, Metrics and
+  Traces). Now with zplane for ES compatibility.
+maintainers:
+- email: hello@openobserve.ai
+  name: OpenObserve
+  url: https://openobserve.ai
+name: openobserve
+type: application
+version: 0.5.38
