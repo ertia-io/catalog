@@ -4,7 +4,7 @@ kind: Cluster
 metadata:
   name: postgres
   annotations:
-    cnpg.io/skipEmptyWalArchiveCheck: true  
+    cnpg.io/skipEmptyWalArchiveCheck: 'enabled'  
 spec:
   instances: {{ .Values.replicas }}
   primaryUpdateStrategy: unsupervised
