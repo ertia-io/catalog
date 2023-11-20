@@ -3,8 +3,8 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: postgres
-  annotations:
-    cnpg.io/skipEmptyWalArchiveCheck: 'enabled'  
+ # annotations:
+  #  cnpg.io/skipEmptyWalArchiveCheck: 'enabled'  
 spec:
   instances: {{ .Values.replicas }}
   primaryUpdateStrategy: unsupervised
@@ -50,9 +50,9 @@ spec:
         wal:
           maxParallel: 8
 
-  bootstrap:
-    recovery:
-      source: s3Backup
+#  bootstrap:
+ #   recovery:
+  #    source: s3Backup
           
   # Example of rolling update strategy:
   # - unsupervised: automated update of the primary once all
