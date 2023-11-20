@@ -33,6 +33,24 @@ spec:
           name: {{ .Release.Name }}-s3
           key: password
 
+  externalClusters:
+    - name: s3Backup
+      barmanObjectStore:
+        destinationPath: {{ .Values.s3.destinationpath }}
+        endpointURL: {{ .Values.s3.endpointURL }}
+        s3Credentials:
+          accessKeyId:
+            name: {{ .Release.Name }}-s3
+            key: username
+          secretAccessKey:
+            name: {{ .Release.Name }}-s3
+            key: password
+        wal:
+          maxParallel: 8
+
+  bootstrap:
+    recovery:
+      source: s3Backup
           
   # Example of rolling update strategy:
   # - unsupervised: automated update of the primary once all
