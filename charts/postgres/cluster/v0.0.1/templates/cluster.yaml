@@ -38,8 +38,8 @@ spec:
   externalClusters:
     - name: s3Backup
       barmanObjectStore:
-        destinationPath: {{ .Values.s3.destinationpath }}
-        endpointURL: {{ .Values.s3.endpointURL }}
+        destinationPath: {{ .Values.s3.restore.destinationpath }}
+        endpointURL: {{ .Values.s3.restore.endpointURL }}
         s3Credentials:
           accessKeyId:
             name: {{ .Release.Name }}-s3

@@ -11,3 +11,6 @@ s3:
   secret:
     username: ""
     password: ""
+  restore:
+    destinationpath: s3://pg-backups-restore
+    endpointURL: https://eu2.contabostorage.com
