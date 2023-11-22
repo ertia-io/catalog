@@ -36,7 +36,7 @@ spec:
           key: password
 
   externalClusters:
-    - name: s3Backup
+    - name: postgres
       barmanObjectStore:
         destinationPath: {{ .Values.s3.restore.destinationpath }}
         endpointURL: {{ .Values.s3.restore.endpointURL }}
@@ -52,7 +52,7 @@ spec:
 
   bootstrap:
     recovery:
-      source: s3Backup
+      source: postgres
           
   # Example of rolling update strategy:
   # - unsupervised: automated update of the primary once all
