@@ -9,7 +9,7 @@ spec:
   instances: {{ .Values.replicas }}
   primaryUpdateStrategy: unsupervised
   storage:
-    size: 10Gi
+    size: 1Gi
   monitoring:
     enablePodMonitor: true 
 
