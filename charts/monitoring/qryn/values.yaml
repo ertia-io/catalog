@@ -1,0 +1,12 @@
+replicas: 1
+clickhouse:
+  server: clickhouse
+  port: 8123
+  username: default
+  password: ""
+  database: qryn
+logs:
+  level: warn
+qryn:
+  username: qryn
+  password: qryn
