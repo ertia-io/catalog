@@ -25,7 +25,9 @@ spec:
         - containerPort: 3100
           name: http
           protocol: TCP
-        env: []
+        env:
+          - name: CLICKHOUSE_AUTH
+            value: {{ $clickHouseAuth | default "default:" | quote }}
         resources: {}
       restartPolicy: Always
       resources:
