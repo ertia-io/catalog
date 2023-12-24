@@ -19,7 +19,11 @@ spec:
     spec:
       containers:
 {{-  $clickHouseAuth := printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password -}}
-        - env:
+        - name: qryn
+          image: "qxip/qryn:bun"
+          ports:
+            - containerPort: 3100
+          env:
             - name: CLICKHOUSE_AUTH
               value: {{ $clickHouseAuth | default "default:" | quote }}
             - name: CLICKHOUSE_PORT
@@ -34,10 +38,6 @@ spec:
               value: {{ .Values.qryn.username | default "qryn" | quote }}
             - name: QRYN_PASSWORD
               value: {{ .Values.qryn.password | default "qryn" | quote }}
-          image: "qxip/qryn:bun"
-          name: qryn
-          ports:
-            - containerPort: 3100
           resources: {}
       restartPolicy: Always
       resources:
