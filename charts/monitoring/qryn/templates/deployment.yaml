@@ -16,6 +16,7 @@ spec:
         qryn.cmd: qryn.dev
       labels:
         io.metrico.service: qryn
+#{{-  $clickHouseAuth := printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password -}}
     spec:
       containers:
       - name: qryn
