@@ -25,17 +25,16 @@ spec:
             - name: CLICKHOUSE_PORT
               value: {{ .Values.clickhouse.port | default "8123" | quote }}
             - name: CLICKHOUSE_SERVER
-              value: {{ .Values.clickhouse.server | default "clickhouse" | quote}}
+              value: {{ .Values.clickhouse.server | default "clickhouse" | quote }}
             - name: CLICKHOUSE_DB
-              value: {{ .Values.clickhouse.database | default "qryn" | quote}}
+              value: {{ .Values.clickhouse.database | default "qryn" | quote }}
             - name: LOG_LEVEL
-              value: {{ .Values.logs.level | default "warn" | quote}}
+              value: {{ .Values.logs.level | default "warn" | quote }}
             - name: QRYN_LOGIN
-              value: {{ .Values.qryn.username | default "qryn" | quote}}
+              value: {{ .Values.qryn.username | default "qryn" | quote }}
             - name: QRYN_PASSWORD
-              value: {{ .Values.qryn.password | default "qryn" | quote}}
- 
-          image: qxip/qryn:bun
+              value: {{ .Values.qryn.password | default "qryn" | quote }}
+          image: "qxip/qryn:bun"
           name: qryn
           ports:
             - containerPort: 3100
