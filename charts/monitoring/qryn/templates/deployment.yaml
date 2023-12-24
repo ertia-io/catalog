@@ -20,7 +20,7 @@ spec:
       containers:
 #{{-  $clickHouseAuth := printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password -}}
       - name: qryn
-        image: "qxip/qryn:bun"
+        image: "docker.io/qxip/qryn:bun"
         ports:
           - containerPort: 3100
         env:
