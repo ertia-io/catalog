@@ -18,8 +18,8 @@ spec:
         io.metrico.service: qryn
     spec:
       containers:
-        - env:
 {{-  $clickHouseAuth := printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password -}}
+        - env:
             - name: CLICKHOUSE_AUTH
               value: {{ $clickHouseAuth | default "default:" | quote }}
             - name: CLICKHOUSE_PORT
