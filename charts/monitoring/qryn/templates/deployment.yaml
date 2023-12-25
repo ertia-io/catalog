@@ -25,8 +25,6 @@ spec:
           name: http
           protocol: TCP
         env:
-          - name: CLICKHOUSE_AUTH
-            value: {{ printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password | quote }}
           - name: CLICKHOUSE_PORT
             value: {{ .Values.clickhouse.port | default "8123" | quote }}
           - name: CLICKHOUSE_SERVER
