@@ -15,7 +15,7 @@ spec:
       annotations:
         qryn.cmd: qryn.dev
       labels:
-        io.metrico.service: qryn}
+        io.metrico.service: qryn
     spec:
       containers:
       - name: qryn
