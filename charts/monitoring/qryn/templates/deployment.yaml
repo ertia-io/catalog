@@ -15,8 +15,7 @@ spec:
       annotations:
         qryn.cmd: qryn.dev
       labels:
-        io.metrico.service: qryn
-{{-  $clickHouseAuth := printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password -}}
+        io.metrico.service: qryn}
     spec:
       containers:
       - name: qryn
@@ -27,7 +26,19 @@ spec:
           protocol: TCP
         env:
           - name: CLICKHOUSE_AUTH
-            value: {{ $clickHouseAuth}}
+            value: {{ printf "%s:%s" .Values.clickhouse.username .Values.clickhouse.password | quote }}
+          - name: CLICKHOUSE_PORT
+            value: {{ .Values.clickhouse.port | default "8123" | quote }}
+          - name: CLICKHOUSE_SERVER
+            value: {{ .Values.clickhouse.server | default "clickhouse" | quote }}
+          - name: CLICKHOUSE_DB
+            value: {{ .Values.clickhouse.database | default "qryn" | quote }}
+          - name: LOG_LEVEL
+            value: {{ .Values.logs.level | default "warn" | quote }}
+          - name: QRYN_LOGIN
+            value: {{ .Values.qryn.username | default "qryn" | quote }}
+          - name: QRYN_PASSWORD
+            value: {{ .Values.qryn.password | default "qryn" | quote }}
         resources: {}
       restartPolicy: Always
       resources:
