@@ -1,0 +1,106 @@
+kind: ConfigMap
+metadata:
+  name: qryn-otel
+data:
+  config.yaml: |
+    receivers:
+      kafka:
+        protocol_version: 2.8.0
+        brokers: kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9093
+        encoding: json
+        topic: logging-cloki
+        group_id: cloki
+        initial_offset: latest
+        auth:
+          tls:
+            ca_file: /tmp/certificates/ca.crt
+            insecure: true
+        message_marking:
+          on_error: false
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+      zipkin:
+        endpoint: 0.0.0.0:9411
+      fluentforward:
+        endpoint: 0.0.0.0:24224
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'otel-collector'
+              scrape_interval: 5s
+              static_configs:
+                - targets: ['exporter:8080']
+    processors:
+      batch:
+        send_batch_size: 10000
+        timeout: 5s
+      memory_limiter:
+        check_interval: 2s
+        limit_mib: 1800
+        spike_limit_mib: 500
+      resourcedetection/system:
+        detectors: ['system']
+        system:
+          hostname_sources: ['os']
+      resource:
+        attributes:
+          - key: service.name
+            value: "serviceName"
+            action: upsert
+      spanmetrics:
+        metrics_exporter: otlp/spanmetrics
+        latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+        dimensions_cache_size: 1500
+      servicegraph:
+        metrics_exporter: otlp/spanmetrics
+        latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+        dimensions: [cluster, namespace]
+        store:
+          ttl: 2s
+          max_items: 200
+      metricstransform:
+        transforms:
+          - include: calls_total
+            action: update
+            new_name: traces_spanmetrics_calls_total
+          - include: latency
+            action: update
+            new_name: traces_spanmetrics_latency
+    exporters:
+      qryn:
+        dsn: tcp://chi-log-analytics-log-analytics-0-0:9000/cloki?username=cloki&password=qwerty
+        timeout: 10s
+        sending_queue:
+          queue_size: 100
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
+        logs:
+          format: json
+
+    extensions:
+      health_check:
+      pprof:
+      zpages:
+      memory_ballast:
+        size_mib: 1000
+
+    service:
+      extensions: [pprof, zpages, health_check]
+      pipelines:
+        logs:
+          receivers: [kafka]
+          processors: [memory_limiter, batch]
+          exporters: [qryn]

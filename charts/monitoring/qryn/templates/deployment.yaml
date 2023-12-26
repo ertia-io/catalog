@@ -39,7 +39,6 @@ spec:
             value: {{ .Values.qryn.username | default "qryn" | quote }}
           - name: QRYN_PASSWORD
             value: {{ .Values.qryn.password | default "qryn" | quote }}
-        resources: {}
       restartPolicy: Always
       resources:
         requests:

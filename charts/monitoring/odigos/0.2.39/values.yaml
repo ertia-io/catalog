@@ -1,17 +1,17 @@
 autoscaler:
   image:
-    repository: keyval/odigos-autoscaler
-    tag: v0.1.63
+    repository: gothenburg/odigos-autoscaler
+    tag: 0.0.1
 
 scheduler:
   image:
-    repository: keyval/odigos-scheduler
-    tag: v0.1.63
+    repository: gothenburg/odigos-scheduler
+    tag: 0.0.1
 
 ui:
   image:
-    repository: keyval/odigos-ui
-    tag: v0.1.63
+    repository: gothenburg/odigos-ui
+    tag: 0.0.1
 
 instrumentor:
   deleteLangDetectionPods: true
@@ -23,13 +23,13 @@ instrumentor:
     - istio-system
     - linkerd
   image:
-    repository: keyval/odigos-instrumentor
-    tag: v0.1.63
+    repository: gothenburg/odigos-instrumentor
+    tag: 0.0.1
 
 odiglet:
   image:
-    repository: keyval/odigos-odiglet
-    tag: v0.1.63
+    repository: gothenburg/odigos-odiglet
+    tag: 0.0.1
 
 telemetry:
   enabled: true
