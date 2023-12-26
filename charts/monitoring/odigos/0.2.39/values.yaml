@@ -10,8 +10,9 @@ scheduler:
 
 ui:
   image:
-    repository: gothenburg/odigos-ui
-    tag: 0.0.1
+    repository: keyval/odigos-ui
+    tag: v0.1.63
+
 
 instrumentor:
   deleteLangDetectionPods: true
