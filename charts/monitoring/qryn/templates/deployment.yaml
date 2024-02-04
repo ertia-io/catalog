@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: qryn
-        image: docker.io/qxip/qryn:bun
+        image: {{ .Values.qryn.tag | default "docker.io/qxip/qryn:bun" }}
         ports:
         - containerPort: 3100
           name: http
