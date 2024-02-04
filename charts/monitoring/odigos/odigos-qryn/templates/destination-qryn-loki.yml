@@ -1,21 +1,12 @@
-apiVersion: internal.odigos.io/v1beta1
+apiVersion: odigos.io/v1alpha1
 kind: Destination
 metadata:
-  type: loki
-  displayName: Loki
-  category: self hosted
+  name: odigos.io.dest.qryn-loki
+  namespace: monitoring
 spec:
-  image: loki.svg
+  data:
+    LOKI_URL: http://{{ .Values.qryn.username }}:{{ .Values.qryn.password }}@qryn.monitoring.svc.cluster.local
+  destinationName: qryn-logs
   signals:
-    traces:
-      supported: false
-    metrics:
-      supported: false
-    logs:
-      supported: true
-  fields:
-    - name: LOKI_URL
-      displayName: Endpoint
-      componentType: input
-      componentProps:
-        type: text
+  - LOGS
+  type: loki

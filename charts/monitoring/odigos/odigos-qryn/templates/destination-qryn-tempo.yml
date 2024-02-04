@@ -1,21 +1,12 @@
-apiVersion: internal.odigos.io/v1beta1
+apiVersion: odigos.io/v1alpha1
 kind: Destination
 metadata:
-  type: tempo
-  displayName: Tempo
-  category: self hosted
+  name: odigos.io.dest.qryn-tempo
+  namespace: monitoring
 spec:
-  image: tempo.svg
+  data:
+    TEMPO_URL: http://{{ .Values.qryn.username }}:{{ .Values.qryn.password }}@qryn.monitoring.svc.cluser.local
+  destinationName: qryn-traces
   signals:
-    traces:
-      supported: true
-    metrics:
-      supported: false
-    logs:
-      supported: false
-  fields:
-    - name: TEMPO_URL
-      displayName: Endpoint
-      componentType: input
-      componentProps:
-        type: text
+  - TRACES
+  type: tempo
