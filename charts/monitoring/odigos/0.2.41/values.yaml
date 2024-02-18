@@ -3,7 +3,8 @@ image:
 
 autoscaler:
   image:
-    repository: keyval/odigos-autoscaler
+    repository: gothenburg/odigos-autoscaler
+    tag: 0.0.1
 
 scheduler:
   image:

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcontribcol
+  labels:
+    app: otelcontribcol
+data:
+  config.yaml: |
+    receivers:
+      k8s_events:
+        namespaces: [default, my_namespace]
+    exporters:
+      otlp:
+        endpoint: <OTLP_ENDPOINT>
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        logs:
+          receivers: [k8s_events]
+          exporters: [otlp]

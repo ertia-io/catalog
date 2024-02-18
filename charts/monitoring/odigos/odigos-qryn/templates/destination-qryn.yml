@@ -1,0 +1,17 @@
+apiVersion: odigos.io/v1alpha1
+kind: Destination
+metadata:
+  name: otel-qryn-dest
+  namespace: monitoring
+spec:
+  data:
+    QRYN_API_KEY: qryn
+    QRYN_URL: http://qryn.monitoring.svc.cluster.local:3100
+  destinationName: qryn
+  secretRef:
+    name: otel-qryn-secret
+  signals:
+  - TRACES
+  - METRICS
+  - LOGS
+  type: qryn
