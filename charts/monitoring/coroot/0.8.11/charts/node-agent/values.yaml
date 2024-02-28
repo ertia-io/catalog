@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/coroot/coroot-node-agent
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+priorityClassName: ""
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "50Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+env: []
+
+otel:
+  tracesEndpoint: ""
+  logsEndpoint: ""
+
+profiling:
+  profilesEndpoint: ""

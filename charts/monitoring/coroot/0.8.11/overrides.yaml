@@ -1,0 +1,49 @@
+corootConnect:
+  enabled: false
+  projectToken:
+  config:
+    clickhouse:
+      addr: ${CLICKHOUSE_ADDRESS}
+      auth:
+        user: monitoring
+        password: ${CLICKHOUSE_PASSWORD}
+      database: monitoring
+
+corootClusterAgent:
+  config:
+    clickhouse:
+      address: clickhouse:9000
+      database: monitoring
+      auth:
+        user: monitoring
+        password: ${CLICKHOUSE_PASSWORD}
+
+prometheus:
+  enabled: false
+
+existingPrometheus:
+  enabled: true
+  service:
+    serviceName: vm-victoria-metrics-single-server
+    servicePort: 8428
+    serviceNamespace: monitoring
+  node-agent-podmonitor:
+    enabled: true
+  
+opentelemetry-collector:
+  enabled: true
+  mode: deployment
+  extraEnvs:
+    - name: CLICKHOUSE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: clickhouse
+          key: admin-password
+  config:
+    exporters:
+      clickhouse:
+        endpoint: tcp://clickhouse.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4
+        database: monitoring
+        ttl_days: 7
+        username: monitoring
+        password: ${env:CLICKHOUSE_PASSWORD}

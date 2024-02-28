@@ -1,0 +1,15 @@
+dependencies:
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 15.16.1
+- name: node-agent
+  repository: https://coroot.github.io/helm-charts
+  version: 0.1.58
+- name: clickhouse
+  repository: https://charts.bitnami.com/bitnami
+  version: 3.1.6
+- name: opentelemetry-collector
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.52.1
+digest: sha256:65e62ad7d2522bf5aa25d89d5af338a054e09c483c95f51346874cb2769c2636
+generated: "2024-02-22T08:00:26.094836287Z"
