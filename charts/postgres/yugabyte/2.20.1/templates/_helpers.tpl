@@ -203,16 +203,26 @@ Get files from fs data directories for readiness / liveness probes.
 
 
 {{/*
+Command to do a disk write and sync for liveness probes.
+*/}}
+{{- define "yugabyte.fs_data_dirs_probe" -}}
+echo "disk check at: $(date)" \
+  | tee {{ template "yugabyte.fs_data_dirs_probe_files" . }} \
+  && sync {{ template "yugabyte.fs_data_dirs_probe_files" . }}
+{{- end -}}
+
+
+{{/*
 Generate server FQDN.
 */}}
 {{- define "yugabyte.server_fqdn" -}}
-  {{- if (and .Values.istioCompatibility.enabled .Values.multicluster.createServicePerPod) -}}
+  {{- if .Values.multicluster.createServicePerPod -}}
     {{- printf "$(HOSTNAME).$(NAMESPACE).svc.%s" .Values.domainName -}}
   {{- else if (and .Values.oldNamingStyle .Values.multicluster.createServiceExports) -}}
     {{ $membershipName := required "A valid membership name is required! Please set multicluster.kubernetesClusterId" .Values.multicluster.kubernetesClusterId }}
     {{- printf "$(HOSTNAME).%s.%s.$(NAMESPACE).svc.clusterset.local" $membershipName .Service.name -}}
   {{- else if .Values.oldNamingStyle -}}
-    {{- printf "$(HOSTNAME).%s.$(NAMESPACE).svc.%s" .Service.name .Values.domainName -}}  
+    {{- printf "$(HOSTNAME).%s.$(NAMESPACE).svc.%s" .Service.name .Values.domainName -}}
   {{- else -}}
     {{- if .Values.multicluster.createServiceExports -}}
       {{ $membershipName := required "A valid membership name is required! Please set multicluster.kubernetesClusterId" .Values.multicluster.kubernetesClusterId }}
@@ -249,7 +259,7 @@ we stick to 0.0.0.0, which works for master.
     {{- else -}}
       $(POD_IP):{{ $port }},127.0.0.1:{{ $port }}
     {{- end -}}
-  {{- else if .Values.multicluster.createServiceExports -}}
+  {{- else if (or .Values.multicluster.createServiceExports .Values.multicluster.createServicePerPod) -}}
     $(POD_IP):{{ $port }}
   {{- else -}}
     {{- include "yugabyte.server_fqdn" . -}}
@@ -267,7 +277,7 @@ Generate server web interface.
 Generate server CQL proxy bind address.
 */}}
 {{- define "yugabyte.cql_proxy_bind_address" -}}
-  {{- if or .Values.istioCompatibility.enabled .Values.multicluster.createServiceExports -}}
+  {{- if or .Values.istioCompatibility.enabled .Values.multicluster.createServiceExports .Values.multicluster.createServicePerPod -}}
     0.0.0.0:{{ index .Service.ports "tcp-yql-port" -}}
   {{- else -}}
     {{- include "yugabyte.server_fqdn" . -}}
@@ -354,4 +364,52 @@ Set consistent issuer name.
         {{- end -}}
       {{- end -}}
   {{- end -}}
+{{- end -}}
+
+{{/*
+  Default nodeAffinity for multi-az deployments
+*/}}
+{{- define "yugabyte.multiAZNodeAffinity" -}}
+requiredDuringSchedulingIgnoredDuringExecution:
+  nodeSelectorTerms:
+  - matchExpressions:
+    - key: failure-domain.beta.kubernetes.io/zone
+      operator: In
+      values:
+      - {{ .Values.AZ }}
+  - matchExpressions:
+    - key: topology.kubernetes.io/zone
+      operator: In
+      values:
+      - {{ .Values.AZ }}
+{{- end -}}
+
+{{/*
+  Default podAntiAffinity for master and tserver
+
+  This requires "appLabelArgs" to be passed in - defined in service.yaml
+  we have a .root and a .label in appLabelArgs
+*/}}
+{{- define "yugabyte.podAntiAffinity" -}}
+preferredDuringSchedulingIgnoredDuringExecution:
+- weight: 100
+  podAffinityTerm:
+    labelSelector:
+      matchExpressions:
+      {{- if .root.Values.oldNamingStyle }}
+      - key: app
+        operator: In
+        values:
+        - "{{ .label }}"
+      {{- else }}
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+        - "{{ .label }}"
+      - key: release
+        operator: In
+        values:
+        - {{ .root.Release.Name | quote }}
+      {{- end }}
+    topologyKey: kubernetes.io/hostname
 {{- end -}}

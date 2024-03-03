@@ -8,7 +8,7 @@ nameOverride: ""
 
 Image:
   repository: "yugabytedb/yugabyte"
-  tag: 2.19.0.0-b190
+  tag: 2.20.1.3-b3
   pullPolicy: IfNotPresent
   pullSecretName: ""
 
@@ -170,6 +170,8 @@ Services:
       http-ycql-met: "12000"
       http-yedis-met: "11000"
       http-ysql-met: "13000"
+      grpc-ybc-port: "18018"
+
 
 ## Should be set to true only if Istio is being used. This also adds
 ## the Istio sidecar injection labels to the pods.
@@ -287,6 +289,15 @@ commonLabels: {}
 master:
   ## Ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core
   ## This might override the default affinity from service.yaml
+  # To successfully merge, we need to follow rules for merging nodeSelectorTerms that kubernentes 
+  # has. Each new node selector term is ORed together, and each match expression or match field in 
+  # a single selector is ANDed together. 
+  # This means, if a pod needs to be scheduled on a label 'custom_label_1' with a value 
+  # 'custom_value_1', we need to add this 'subterm' to each of our pre-defined node affinity
+  # terms.
+  #
+  # Pod anti affinity is a simpler merge. Each term is applied separately, and the weight is tracked.
+  # The pod that achieves the highest weight is selected.
   ## Example.
   # affinity:
   #   podAntiAffinity:
@@ -298,6 +309,8 @@ master:
   #           values:
   #           - "yb-master"
   #       topologyKey: kubernetes.io/hostname
+  #
+  # For further examples, see examples/yugabyte/affinity_overrides.yaml
   affinity: {}
 
   ## Extra environment variables passed to the Master pods.
@@ -354,10 +367,23 @@ master:
   #   mountPath: /home/yugabyte/nfs-backup
   extraVolumeMounts: []
 
+  ## Set service account for master DB pods. The service account
+  ## should exist in the namespace where the master DB pods are brought up.
+  serviceAccount: ""
+
 
 tserver:
   ## Ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core
   ## This might override the default affinity from service.yaml
+  # To successfully merge, we need to follow rules for merging nodeSelectorTerms that kubernentes 
+  # has. Each new node selector term is ORed together, and each match expression or match field in 
+  # a single selector is ANDed together. 
+  # This means, if a pod needs to be scheduled on a label 'custom_label_1' with a value 
+  # 'custom_value_1', we need to add this 'subterm' to each of our pre-defined node affinity
+  # terms.
+  #
+  # Pod anti affinity is a simpler merge. Each term is applied separately, and the weight is tracked.
+  # The pod that achieves the highest weight is selected.
   ## Example.
   # affinity:
   #   podAntiAffinity:
@@ -369,6 +395,7 @@ tserver:
   #           values:
   #           - "yb-tserver"
   #       topologyKey: kubernetes.io/hostname
+  # For further examples, see examples/yugabyte/affinity_overrides.yaml
   affinity: {}
 
   ## Extra environment variables passed to the TServer pods.
@@ -432,6 +459,10 @@ tserver:
   # - name: custom-nfs-vol
   #   path: /home/yugabyte/nfs-backup
   extraVolumeMounts: []
+
+  ## Set service account for tserver DB pods. The service account
+  ## should exist in the namespace where the tserver DB pods are brought up.
+  serviceAccount: ""
 
 helm2Legacy: false
 
