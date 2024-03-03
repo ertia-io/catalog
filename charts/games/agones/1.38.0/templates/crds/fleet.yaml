@@ -17,7 +17,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: gameserversets.agones.dev
+  name: fleets.agones.dev
   labels:
     component: crd
     app: {{ template "agones.name" . }}
@@ -27,12 +27,11 @@ metadata:
 spec:
   group: agones.dev
   names:
-    kind: GameServerSet
-    plural: gameserversets
+    kind: Fleet
+    plural: fleets
     shortNames:
-      - gss
-      - gsset
-    singular: gameserverset
+      - flt
+    singular: fleet
   scope: Namespaced
   versions:
     - name: v1
@@ -59,15 +58,14 @@ spec:
           type: date
       schema:
         openAPIV3Schema:
-          description: 'GameServerSet is the data structure for a set of GameServers.'
+          description: 'Fleet is the data structure for a Fleet resource'
           type: object
           properties:
             spec:
-              description: 'GameServerSetSpec the specification for GameServerSet. More info:
-                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServerSet'
+              description: 'FleetSpec is the spec for a Fleet. More info:
+                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet'
               type: object
               required:
-                - replicas
                 - template
               properties:
                 replicas:
@@ -90,12 +88,56 @@ spec:
                   enum:
                     - Packed
                     - Distributed
+                strategy:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Recreate
+                        - RollingUpdate
+                    rollingUpdate:
+                      type: object
+                      nullable: true
+                      properties:
+                        maxSurge:
+                          x-kubernetes-int-or-string: true
+                          anyOf:
+                            - type: integer
+                            - type: string
+                        maxUnavailable:
+                          x-kubernetes-int-or-string: true
+                          anyOf:
+                            - type: integer
+                            - type: string
+                priorities:
+                  type: array
+                  description: Configuration of Counters and Lists scale down logic -- which gameservers in the Fleet are most important to keep around.
+                  nullable: true
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        description: Whether a Counter or a List.
+                        enum:
+                          - Counter
+                          - List
+                      key:
+                        type: string
+                        description: The name of the Counter or List. If not found on the GameServer, those GameServer with the key will have priority over those that do not.
+                      order:
+                        type: string
+                        description: Ascending or Descending sort order. Default is "Ascending" so remove smaller total capacity first. "Descending" would remove larger total capacity first.
+                        enum:
+                          - Ascending
+                          - Descending
                 template:
                   {{- $data := dict "metadata" true "podPreserveUnknownFields" .Values.gameservers.podPreserveUnknownFields }}
-                  {{- include "gameserver.schema" $data | indent 18 }}
+                  {{- include "gameserver.schema" $data | indent 17 }}
             status:
-              description: 'GameServerSetStatus is the status of a GameServerSet. More info:
-                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServerSet'
+              description: 'FleetStatus is the status of a Fleet. More info:
+                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet'
               type: object
               properties:
                 replicas:
@@ -108,9 +150,6 @@ spec:
                   type: integer
                   minimum: 0
                 allocatedReplicas:
-                  type: integer
-                  minimum: 0
-                shutdownReplicas:
                   type: integer
                   minimum: 0
                 players:
@@ -131,11 +170,17 @@ spec:
                   additionalProperties:
                     type: object
                     properties:
-                      count: # Aggregated count of the Counter across the GameServerSet
+                      allocatedCount: # Aggregated count of the Counter across allocated GameServers in the Fleet
+                        type: integer
+                        minimum: 0
+                      allocatedCapacity: # Aggregated maximum capacity of the Counter across allocated GameServers in the Fleet
+                        type: integer
+                        minimum: 0
+                      count: # Aggregated count of the Counter across the Fleet
                         type: integer
                         default: 0
                         minimum: 0
-                      capacity: # Aggregated maximum capacity of the Counter across the GameServerSet
+                      capacity: # Aggregated maximum capacity of the Counter across the Fleet
                         type: integer
                         minimum: 0
                 lists:
@@ -146,22 +191,28 @@ spec:
                   additionalProperties:
                     type: object
                     properties:
-                      capacity: # Aggregated maximum capacity of the List across the GameServerSet
+                      allocatedCount: # Aggregated number of items in the List across allocated GameServers in the Fleet
                         type: integer
                         minimum: 0
-                      count: # Aggregated number of items in the List across the GameServerSet
+                      allocatedCapacity: # Aggregated maximum capacity of the List across allocated GameServers in the Fleet
                         type: integer
                         minimum: 0
+                      count: # Aggregated number of items in the List across the Fleet
+                        type: integer
                         default: 0
+                        minimum: 0
+                      capacity: # Aggregated maximum capacity of the List across the Fleet
+                        type: integer
+                        minimum: 0
       subresources:
         # status enables the status subresource.
         status: { }
         # scale enables the scale subresource.
         scale:
-          # specReplicasPath defines the jsonPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
+          # specReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
           specReplicasPath: .spec.replicas
-          # statusReplicasPath defines the jsonPath inside of a custom resource that corresponds to Scale.Status.Replicas.
+          # statusReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Replicas.
           statusReplicasPath: .status.replicas
-          # labelSelectorPath defines the jsonPath inside of a custom resource that corresponds to Scale.Status.Selector.
+          # labelSelectorPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Selector.
           labelSelectorPath: .status.labelSelector
 {{- end }}

@@ -32,6 +32,7 @@ agones:
   crds:
     install: true
     cleanupOnDelete: true
+    cleanupJobTTL: 60
   serviceaccount:
     allocator:
       name: agones-allocator
@@ -91,6 +92,7 @@ agones:
     replicas: 2
     pdb:
         minAvailable: 1
+    topologySpreadConstraints: {}
   extensions:
     resources: {}
       # requests:
@@ -138,6 +140,7 @@ agones:
       initialDelaySeconds: 3
       periodSeconds: 3
       failureThreshold: 3
+    topologySpreadConstraints: {}
   ping:
     install: true
     pdb:
@@ -179,6 +182,7 @@ agones:
       periodSeconds: 3
       failureThreshold: 3
       timeoutSeconds: 1
+    topologySpreadConstraints: {}
   allocator:
     install: true
     pdb:
@@ -211,17 +215,20 @@ agones:
     service:
       name: agones-allocator
       serviceType: LoadBalancer
+      clusterIP: ""
       loadBalancerIP: ""
       loadBalancerSourceRanges: []
       annotations: {}
       http:
         enabled: true
+        appProtocol: ""
         port: 443
         portName: https
         targetPort: 8443
         nodePort: 0 # nodePort will be used if the serviceType is set to NodePort
       grpc:
         enabled: true
+        appProtocol: ""
         port: 443
         portName: grpc
         targetPort: 8443
@@ -244,13 +251,13 @@ agones:
     remoteAllocationTimeout: 10s
     totalRemoteAllocationTimeout: 30s
     allocationBatchWaitTime: 500ms
+    topologySpreadConstraints: {}
   image:
     registry: us-docker.pkg.dev/agones-images/release
-    tag: 1.33.0
+    tag: 1.38.0
     controller:
       name: agones-controller
       pullPolicy: IfNotPresent
-    # extensions settings ignored unless `SplitControllerAndExtensions` feature gate is enabled
     extensions:
       name: agones-extensions
       pullPolicy: IfNotPresent

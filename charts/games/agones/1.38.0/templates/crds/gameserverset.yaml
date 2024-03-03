@@ -17,7 +17,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: fleets.agones.dev
+  name: gameserversets.agones.dev
   labels:
     component: crd
     app: {{ template "agones.name" . }}
@@ -27,11 +27,12 @@ metadata:
 spec:
   group: agones.dev
   names:
-    kind: Fleet
-    plural: fleets
+    kind: GameServerSet
+    plural: gameserversets
     shortNames:
-      - flt
-    singular: fleet
+      - gss
+      - gsset
+    singular: gameserverset
   scope: Namespaced
   versions:
     - name: v1
@@ -58,14 +59,15 @@ spec:
           type: date
       schema:
         openAPIV3Schema:
-          description: 'Fleet is the data structure for a Fleet resource'
+          description: 'GameServerSet is the data structure for a set of GameServers.'
           type: object
           properties:
             spec:
-              description: 'FleetSpec is the spec for a Fleet. More info:
-                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet'
+              description: 'GameServerSetSpec the specification for GameServerSet. More info:
+                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServerSet'
               type: object
               required:
+                - replicas
                 - template
               properties:
                 replicas:
@@ -88,34 +90,34 @@ spec:
                   enum:
                     - Packed
                     - Distributed
-                strategy:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                      enum:
-                        - Recreate
-                        - RollingUpdate
-                    rollingUpdate:
-                      type: object
-                      nullable: true
-                      properties:
-                        maxSurge:
-                          x-kubernetes-int-or-string: true
-                          anyOf:
-                            - type: integer
-                            - type: string
-                        maxUnavailable:
-                          x-kubernetes-int-or-string: true
-                          anyOf:
-                            - type: integer
-                            - type: string
+                priorities:
+                  type: array
+                  description: Configuration of Counters and Lists scale down logic. Priorities in the gameserverset.yaml file must be identical to the structure of priorities in fleet.yaml.
+                  nullable: true
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        description: Whether a Counter or a List.
+                        enum:
+                          - Counter
+                          - List
+                      key:
+                        type: string
+                        description: The name of the Counter or List
+                      order:
+                        type: string
+                        description: Ascending or Descending sort order
+                        enum:
+                          - Ascending
+                          - Descending
                 template:
                   {{- $data := dict "metadata" true "podPreserveUnknownFields" .Values.gameservers.podPreserveUnknownFields }}
-                  {{- include "gameserver.schema" $data | indent 17 }}
+                  {{- include "gameserver.schema" $data | indent 18 }}
             status:
-              description: 'FleetStatus is the status of a Fleet. More info:
-                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet'
+              description: 'GameServerSetStatus is the status of a GameServerSet. More info:
+                https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServerSet'
               type: object
               properties:
                 replicas:
@@ -128,6 +130,9 @@ spec:
                   type: integer
                   minimum: 0
                 allocatedReplicas:
+                  type: integer
+                  minimum: 0
+                shutdownReplicas:
                   type: integer
                   minimum: 0
                 players:
@@ -148,13 +153,18 @@ spec:
                   additionalProperties:
                     type: object
                     properties:
-                      count: # initial count
+                      allocatedCount: # Aggregated count of the Counter across allocated GameServers in the GameServerSet
+                        type: integer
+                        minimum: 0
+                      allocatedCapacity: # Aggregated maximum capacity of the Counter across allocated GameServers in the GameServerSet
+                        type: integer
+                        minimum: 0
+                      count: # Aggregated count of the Counter across the GameServerSet
                         type: integer
                         default: 0
                         minimum: 0
-                      capacity: # max capacity of the counter
+                      capacity: # Aggregated maximum capacity of the Counter across the GameServerSet
                         type: integer
-                        default: 1000
                         minimum: 0
                 lists:
                   type: object
@@ -164,27 +174,28 @@ spec:
                   additionalProperties:
                     type: object
                     properties:
-                      capacity: # max capacity of the array (can be less than or equal to value of maxItems)
+                      allocatedCount: # Aggregated number of items in the List across allocated GameServers in the GameServerSet
                         type: integer
                         minimum: 0
-                        default: 1000
-                        maximum: 1000 # must be equal to values.maxItems
-                      values:
-                        type: array
-                        x-kubernetes-list-type: set # Requires items in the array to be unique
-                        maxItems: 1000 # max possible size of the value array (cannot be updated)
-                        items: # name of the item (player1, session1, room1, etc.)
-                          type: string
-                        default: []
+                      allocatedCapacity: # Aggregated maximum capacity of the List across allocated GameServers in the GameServerSet
+                        type: integer
+                        minimum: 0
+                      count: # Aggregated number of items in the List across the GameServerSet
+                        type: integer
+                        default: 0
+                        minimum: 0
+                      capacity: # Aggregated maximum capacity of the List across the GameServerSet
+                        type: integer
+                        minimum: 0
       subresources:
         # status enables the status subresource.
         status: { }
         # scale enables the scale subresource.
         scale:
-          # specReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
+          # specReplicasPath defines the jsonPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
           specReplicasPath: .spec.replicas
-          # statusReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Replicas.
+          # statusReplicasPath defines the jsonPath inside of a custom resource that corresponds to Scale.Status.Replicas.
           statusReplicasPath: .status.replicas
-          # labelSelectorPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Selector.
+          # labelSelectorPath defines the jsonPath inside of a custom resource that corresponds to Scale.Status.Selector.
           labelSelectorPath: .status.labelSelector
 {{- end }}

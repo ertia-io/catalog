@@ -38,6 +38,9 @@ spec:
     - port: {{ .Values.agones.allocator.service.http.port }}
       name: {{ .Values.agones.allocator.service.http.portName }}
       targetPort: {{ .Values.agones.allocator.service.http.targetPort }}
+      {{- if .Values.agones.allocator.service.http.appProtocol }}
+      appProtocol: {{.Values.agones.allocator.service.http.appProtocol}}
+      {{- end}}
       {{- if eq .Values.agones.allocator.service.serviceType "NodePort" }}
       nodePort: {{ .Values.agones.allocator.service.http.nodePort }}
       {{- end }}
@@ -47,6 +50,9 @@ spec:
     - port: {{ .Values.agones.allocator.service.grpc.port }}
       name: {{ .Values.agones.allocator.service.grpc.portName }}
       targetPort: {{ .Values.agones.allocator.service.grpc.targetPort }}
+      {{- if .Values.agones.allocator.service.grpc.appProtocol }}
+      appProtocol: {{.Values.agones.allocator.service.grpc.appProtocol}}
+      {{- end}}
       {{- if eq .Values.agones.allocator.service.serviceType "NodePort" }}
       nodePort: {{ .Values.agones.allocator.service.grpc.nodePort }}
       {{- end }}
@@ -57,12 +63,18 @@ spec:
     - port: {{ .Values.agones.allocator.service.grpc.port }}
       name: {{ .Values.agones.allocator.service.grpc.portName }}
       targetPort: {{ .Values.agones.allocator.service.grpc.targetPort }}
+      {{- if .Values.agones.allocator.service.grpc.appProtocol }}
+      appProtocol: {{.Values.agones.allocator.service.grpc.appProtocol}}
+      {{- end}}      
       {{- if eq .Values.agones.allocator.service.serviceType "NodePort" }}
       nodePort: {{ .Values.agones.allocator.service.grpc.nodePort }}
       {{- end }}
       protocol: TCP
 {{- end }}
   type: {{ .Values.agones.allocator.service.serviceType }}
+{{- if (ne .Values.agones.allocator.service.clusterIP "") }}
+  clusterIP: {{ .Values.agones.allocator.service.clusterIP }}
+{{- end }}
 {{- if $useLoadBalancerIP }}
   loadBalancerIP: {{ .Values.agones.allocator.service.loadBalancerIP }}
 {{- end }}
@@ -165,6 +177,10 @@ spec:
 {{- toYaml .Values.agones.allocator.annotations | nindent 8 }}
 {{- end }}
     spec:
+      {{- if .Values.agones.allocator.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.agones.allocator.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
       affinity:
       {{- if .Values.agones.allocator.affinity }}
       {{- if .Values.agones.requireDedicatedNodes }}

@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $featureGates := include "agones.featureGates" . | fromYaml }}
-{{- if $featureGates.SplitControllerAndExtensions }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -55,6 +53,10 @@ spec:
         release: {{ .Release.Name }}
         heritage: {{ .Release.Service }}
     spec:
+      {{- if .Values.agones.extensions.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.agones.extensions.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
       affinity:
       {{- if .Values.agones.extensions.affinity }}
       {{- if .Values.agones.requireDedicatedNodes }}
@@ -120,7 +122,7 @@ spec:
           value: {{ .Values.agones.cloudProduct | quote }}
 {{- if .Values.agones.extensions.persistentLogs }}
         - name: LOG_DIR
-          value: "/home/agones/logs"
+          value: "/logs"
         - name: LOG_SIZE_LIMIT_MB
           value: {{ .Values.agones.extensions.persistentLogsSizeLimitMB | quote }}
 {{- end }}
@@ -167,11 +169,11 @@ spec:
 {{- end }}
         volumeMounts:
         - name: certs
-          mountPath: /home/agones/certs
+          mountPath: /certs
           readOnly: true
 {{- if .Values.agones.extensions.persistentLogs }}
         - name: logs
-          mountPath: /home/agones/logs
+          mountPath: /logs
           readOnly: false
 {{- end }}
       volumes:
@@ -209,4 +211,3 @@ spec:
       app: {{ template "agones.name" . }}
       release: {{ .Release.Name }}
       heritage: {{ .Release.Service }}
-{{- end }}
