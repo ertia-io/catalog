@@ -86,11 +86,13 @@ spec:
           image: "{{ .Values.corootClusterAgent.image.repository }}:{{ .Values.corootClusterAgent.image.tag }}"
           imagePullPolicy: {{ .Values.corootClusterAgent.image.pullPolicy }}
           env:
+            {{- if .Values.clickhouse.enabled }}
             - name: CLICKHOUSE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "coroot.clickhouse.fullname" . }}
                   key: admin-password
+            {{- end }}
           {{- with .Values.corootClusterAgent.env }}
           {{- . | toYaml | nindent 12 }}
           {{- end }}
