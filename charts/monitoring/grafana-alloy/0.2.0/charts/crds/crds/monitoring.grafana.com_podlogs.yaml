@@ -4,6 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     meta.helm.sh/release-name: grafana-alloy
+    meta.helm.sh/release-namespace: monitoring 
+    meta.helm.sh/managed-by: grafana-alloy
+    app.kubernetes.io/managed-by: Helm
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: podlogs.monitoring.grafana.com
