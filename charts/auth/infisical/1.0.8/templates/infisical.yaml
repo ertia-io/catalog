@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "infisical.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     updatedAt: {{ now | date "2006-01-01 MST 15:04:05" | quote }}
     {{- with $infisicalValues.deploymentAnnotations }}
@@ -75,6 +76,7 @@ apiVersion: v1
 kind: Service 
 metadata:
   name: {{ include "infisical.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "infisical.labels" . | nindent 4 }}
   {{- with $infisicalValues.service.annotations }}

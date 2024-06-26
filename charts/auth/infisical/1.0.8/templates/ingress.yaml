@@ -9,6 +9,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: infisical-ingress
+  namespace: {{ .Release.Namespace }}
   {{- with $ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
