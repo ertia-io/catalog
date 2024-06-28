@@ -19,6 +19,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "cloudnative-pg.serviceAccountName" . }}
+  namespace {{ .Release.Namespace }}
   labels:
     {{- include "cloudnative-pg.labels" . | nindent 4 }}
   {{- with .Values.commonAnnotations }}
