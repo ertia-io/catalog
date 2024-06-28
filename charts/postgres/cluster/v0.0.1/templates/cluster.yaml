@@ -3,6 +3,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: postgres
+  namespace: {{ .Release.Namespace }}
  # annotations:
   #  cnpg.io/skipEmptyWalArchiveCheck: 'enabled'  
 spec:
