@@ -16,6 +16,7 @@ spec:
 
   superuserSecret:
     name: {{ .Release.Name }}
+  enableSuperuserAccess: true
   
 #  bootstrap:
 #    initdb:
