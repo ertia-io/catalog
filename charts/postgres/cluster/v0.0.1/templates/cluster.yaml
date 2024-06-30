@@ -38,9 +38,9 @@ spec:
           key: password
 {{ end }}
 
+{{ if .Values.s3.enabled }}
   externalClusters:
     - name: postgres
-{{ if .Values.s3.enabled }}
       barmanObjectStore:
         destinationPath: {{ .Values.s3.restore.destinationpath }}
         endpointURL: {{ .Values.s3.restore.endpointURL }}
