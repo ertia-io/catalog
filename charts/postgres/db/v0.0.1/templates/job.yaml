@@ -39,6 +39,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-db
+  namespace: {{ .Release.Namespace }}
 spec:
   template:
     spec:
@@ -74,6 +75,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-grant
+  namespace: {{ .Release.Namespace }}
 spec:
   template:
     spec:
