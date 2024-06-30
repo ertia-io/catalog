@@ -23,9 +23,9 @@ spec:
 #      owner: app
 #      secret:
 #         name: app-secret
+{{ if .Values.s3.enabled }}
   backup:
     retentionPolicy: "14d"
-{{ if .Values.s3.enabled }}
     barmanObjectStore:
       destinationPath: {{ .Values.s3.destinationpath }}
       endpointURL: {{ .Values.s3.endpointURL }}
