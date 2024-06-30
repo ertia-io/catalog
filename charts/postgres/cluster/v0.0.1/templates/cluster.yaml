@@ -25,6 +25,7 @@ spec:
 #         name: app-secret
   backup:
     retentionPolicy: "14d"
+{{ if .Values.s3.enabled }}
     barmanObjectStore:
       destinationPath: {{ .Values.s3.destinationpath }}
       endpointURL: {{ .Values.s3.endpointURL }}
@@ -35,9 +36,11 @@ spec:
         secretAccessKey:
           name: {{ .Release.Name }}-s3
           key: password
+{{ end }}
 
   externalClusters:
     - name: postgres
+{{ if .Values.s3.enabled }}
       barmanObjectStore:
         destinationPath: {{ .Values.s3.restore.destinationpath }}
         endpointURL: {{ .Values.s3.restore.endpointURL }}
@@ -50,6 +53,7 @@ spec:
             key: password
         wal:
           maxParallel: 8
+{{ end }}
 
   #bootstrap:
    # recovery:

@@ -6,6 +6,7 @@ secret:
   database: ""
 
 s3:
+  enabled: false
   destinationpath: s3://pg-backups
   endpointURL: https://eu2.contabostorage.com
   secret:
