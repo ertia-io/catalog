@@ -34,6 +34,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "cloudnative-pg.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudnative-pg.labels" . | nindent 4 }}
   {{- with .Values.commonAnnotations }}
@@ -385,6 +386,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "cloudnative-pg.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudnative-pg.labels" . | nindent 4 }}
   {{- with .Values.commonAnnotations.annotations }}
@@ -404,6 +406,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "cloudnative-pg.fullname" . }}-view
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudnative-pg.labels" . | nindent 4 }}
     {{- if .Values.rbac.aggregateClusterRoles }}
@@ -428,6 +431,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "cloudnative-pg.fullname" . }}-edit
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "cloudnative-pg.labels" . | nindent 4 }}
     {{- if .Values.rbac.aggregateClusterRoles }}
