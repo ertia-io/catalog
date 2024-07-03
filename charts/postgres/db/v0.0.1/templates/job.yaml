@@ -67,7 +67,7 @@ spec:
                 secretKeyRef: 
                   name: "{{ .Release.Name }}"
                   key: database
-          command: ["psql","-c", "CREATE DATABASE $(APPLICATIONDB) WITH OWNER $(APPLICATIONUSER)"]
+          command: ["psql","-c", "CREATE DATABASE $(APPLICATIONDB) WITH OWNER $(APPLICATIONUSER) TEMPLATE template0 ENCODING UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8';"]
       restartPolicy: Never
   backoffLimit: 10
 ---
