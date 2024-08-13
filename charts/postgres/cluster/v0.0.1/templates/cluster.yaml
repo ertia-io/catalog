@@ -24,6 +24,7 @@ spec:
 #      owner: app
 #      secret:
 #         name: app-secret
+
 {{ if .Values.s3.enabled }}
   backup:
     retentionPolicy: "14d"
