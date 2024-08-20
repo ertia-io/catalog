@@ -1,0 +1,92 @@
+name: obsv-bundle
+enabled: true
+version: 1.0.0
+deployments:
+  - name: clickhouse
+    type: helm
+    uri: git+::https://github.com/ertia-io/catalog/charts/monitoring/clickhouse/4.1.13@main
+    enabled: true
+    namespace: monitoring
+    values:
+      replicaCount: 1
+      shards: 1
+      keeper:
+        enabled: true
+      zookeeper:
+        enabled: false
+      auth:
+        username: "default"
+        password: "{{ .Secret \"clickhouse.monitoring.password\" }}"
+      extraOverrides: |
+        <clickhouse>
+          <access_control_improvements>
+            <settings_constraints_replace_previous>true</settings_constraints_replace_previous>
+          </access_control_improvements>
+        </clickhouse>
+      initdbScripts:
+        createUser.sh: |
+          #!/bin/bash
+          clickhouse-client -u $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -q "CREATE USER IF NOT EXISTS grafana IDENTIFIED by '{{ .Secret "clickhouse.monitoring.password" }}'" -q "CREATE SETTINGS PROFILE IF NOT EXISTS grafana_readonly SETTINGS readonly = 1, max_execution_time CHANGEABLE_IN_READONLY TO grafana" -q "CREATE DATABASE IF NOT EXISTS monitoring" -q "GRANT SELECT ON monitoring.* TO grafana" -q "GRANT SELECT ON otel.* TO grafana"
+
+  - name: kube-state-metrics
+    type: helm
+    uri: git+::https://github.com/ertia-io/catalog/charts/monitoring/kube-prometheus/v8.4.3/charts/kube-state-metrics@main
+    enabled: true
+    namespace: monitoring
+
+  - name: grafana
+    type: helm
+    uri: git+::https://github.com/ertia-io/catalog/charts/monitoring/grafana/7.3.0@main
+    enabled: true
+    namespace: monitoring
+    values: 
+      adminPassword: "{{ .Secret \"grafana.admin.password\" }}"
+      plugins:
+        - grafana-clickhouse-datasource
+        - isovalent-hubbleprocessancestry-panel
+        - novatec-sdg-panel
+        - grafana-synthetic-monitoring-app
+      datasources: 
+        datasources.yaml:
+          apiVersion: 1
+          datasources:
+            - name: ClickHouse
+              type: grafana-clickhouse-datasource
+              jsonData:
+                host: clickhouse.monitoring.svc.cluster.local
+                port: 9000
+                protocol: native
+                secure: false
+                username: grafana #readonly user that needs to be created
+                defaultDatabase: otel
+                defaultTable: table
+                dialTimeout: 10
+                queryTimeout: 60
+                validateSql: false
+                logs:
+                  defaultDatabase: otel
+                  defaultTable: otel_logs
+                  otelEnabled: true
+                  otelVersion: latest
+                  timeColumn: Timestamp
+                  logLevelColumn: SeverityText
+                  logMessageColumn: Body
+                traces:
+                  defaultDatabase: otel
+                  defaultTable: otel_traces
+                  otelEnabled: true
+                  otelVersion: latest
+                  traceIdColumn: TraceId
+                  spanIdColumn: SpanId
+                  operationNameColumn: SpanName
+                  parentSpanIdColumn: ParentSpanId
+                  serviceNameColumn: ServiceName
+                  durationTimeColumn: Duration
+                  startTimeColumn: Timestamp
+                  tagsColumn: SpanAttributes
+                  serviceTagsColumn: ResourceAttributes
+              secureJsonData:
+                password: "{{ .Secret \"clickhouse.monitoring.password\" }}"
+              isDefault: true
+              editable: true
+              version: 1

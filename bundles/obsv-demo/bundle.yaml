@@ -1,0 +1,52 @@
+name: base
+enabled: true
+version: 1.0.0
+deployments:
+
+  - name: cert-manager
+    type: helm
+    enabled: true
+    namespace: cert-manager
+    uri: git+::https://github.com/ertia-io/catalog/charts/certs/cert-manager/v1.11.2@main
+    values:
+      installCRDs: true
+    timeout: 3m
+
+  - name: cert-issuers
+    type: helm
+    enabled: true
+    namespace: cert-manager
+    uri: git+::https://github.com/ertia-io/catalog/charts/certs/cert-issuers/v0.0.1@main
+    values:
+      letsencrypt:
+        enabled: true
+      zerossl:
+        enabled: true
+    requires:
+      - name: cert-manager
+        type: helm
+        namespace: cert-manager
+        timeout: 3m      
+
+  - name: postgres-operator
+    type: helm
+    uri: git+::https://github.com/ertia-io/catalog/charts/postgres/cloudnative-pg/0.18.2@main
+    enabled: true
+    namespace: db
+
+  - name: postgres-cluster
+    namespace: db
+    type: helm
+    enabled: true
+    uri: git+::https://github.com/ertia-io/catalog/charts/postgres/cluster/v0.0.1@main
+    requires:
+      - name: postgres-operator
+        type: helm
+        namespace: db
+        timeout: 5m
+    values:
+      replicas: 3
+      secret:
+        username: "postgres"
+        password: "{{ .Secret \"postgres.db.password\" }}"
+        database: "postgres"
