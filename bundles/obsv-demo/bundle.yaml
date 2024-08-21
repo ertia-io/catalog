@@ -11,6 +11,11 @@ deployments:
     values:
       installCRDs: true
     timeout: 3m
+    requires:
+      - name: cilium
+        type: helm
+        namespace: kube-system
+        timeout: 3m      
 
   - name: cert-issuers
     type: helm
