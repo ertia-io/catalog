@@ -9,7 +9,7 @@ fullnameOverride: ""
 telemetrygen:
   enabled: true
 
-  otlp-endpoint: ""
+  #otlpEndpoint: ""
   #otlp-endpoint: "otelcollector.svc.cluster.local:4317"
 
   replicaCount: 1

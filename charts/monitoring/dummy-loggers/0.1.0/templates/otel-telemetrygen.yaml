@@ -1,5 +1,5 @@
 {{- if .Values.telemetrygen.enabled -}}
-{{- $otlp_endpoint := .Values.telemetrygen.otlp-endpoint | required ".Values.telemetrygen.otlp-endpoint is required!" -}}
+{{- $otlp_endpoint := .Values.telemetrygen.otlpEndpoint | required ".Values.telemetrygen.otlpEndpoint is required!" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
