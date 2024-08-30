@@ -1,0 +1,98 @@
+{{- if .Values.telemetrygen.enabled -}}
+{{- $otlp_endpoint := .Values.telemetrygen.otlp-endpoint | required ".Values.telemetrygen.otlp-endpoint is required!" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dummy-loggers.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "dummy-loggers.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.telemetrygen.replicaCount }}
+  selector:
+    matchLabels:
+      app: dummy-loggers-telemetrygen
+  template:
+    metadata:
+      {{- with .Values.telemetrygen.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: dummy-loggers-telemetrygen
+        {{- include "dummy-loggers.labels" . | nindent 8 }}
+        {{- with .Values.telemetrygen.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      restartPolicy: Always
+      containers:
+{{- if .Values.telemetrygen.traces.enabled -}}
+        - name: {{ .Chart.Name }}-telemetrygen-traces
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          image: "{{ .Values.telemetrygen.image.repository }}:{{ .Values.telemetrygen.image.tag }}"
+          command:
+          - /telemetrygen
+          - traces
+          - --otlp-insecure
+          - --otlp-endpoint="{{ $otlp_endpoint }}"
+          - --duration=1h
+          - --rate=1
+          - --otlp-attributes=k8s.container.name="{{ .Chart.Name }}-telemetrygen"
+          - --service telemetrygen
+{{- end }}
+{{- if .Values.telemetrygen.metrics.enabled -}}
+        - name: {{ .Chart.Name }}-telemetrygen-metrics
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          image: "{{ .Values.telemetrygen.image.repository }}:{{ .Values.telemetrygen.image.tag }}"
+          command:
+          - /telemetrygen
+          - metrics
+          - --trace-id {{ include "randgen.randHex" 16 }}
+          - --span-id {{ include "randgen.randHex" 8 }}
+          - --otlp-insecure
+          - --otlp-endpoint="{{ $otlp_endpoint }}"
+          - --duration=1h
+          - --rate=1
+          - --otlp-attributes=k8s.container.name="{{ .Chart.Name }}-telemetrygen"
+{{- end }}
+{{- if .Values.telemetrygen.logs.enabled -}}
+        - name: {{ .Chart.Name }}-telemetrygen-logs
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          image: "{{ .Values.telemetrygen.image.repository }}:{{ .Values.telemetrygen.image.tag }}"
+          command:
+          - /telemetrygen
+          - logs
+          - --trace-id {{ include "randgen.randHex" 16 }}
+          - --span-id {{ include "randgen.randHex" 8 }}
+          - --otlp-insecure
+          - --otlp-endpoint="{{ $otlp_endpoint }}"
+          - --duration=1h
+          - --rate=1
+          - --body='{{ .Values.telemetrygen.logs.body }}'
+{{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
