@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "dummy-loggers.name" -}}
+{{- define "telemetrygen.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "dummy-loggers.fullname" -}}
+{{- define "telemetrygen.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "dummy-loggers.chart" -}}
+{{- define "telemetrygen.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "dummy-loggers.labels" -}}
-helm.sh/chart: {{ include "dummy-loggers.chart" . }}
-{{ include "dummy-loggers.selectorLabels" . }}
+{{- define "telemetrygen.labels" -}}
+helm.sh/chart: {{ include "telemetrygen.chart" . }}
+{{ include "telemetrygen.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "dummy-loggers.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "dummy-loggers.name" . }}
+{{- define "telemetrygen.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "telemetrygen.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "dummy-loggers.serviceAccountName" -}}
+{{- define "telemetrygen.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "dummy-loggers.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "telemetrygen.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
