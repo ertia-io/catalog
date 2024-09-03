@@ -25,18 +25,29 @@ spec:
     processors:
       memory_limiter:
         check_interval: 1s
-        limit_percentage: 75
-        spike_limit_percentage: 15
+        limit_percentage: 90
+        spike_limit_percentage: 50
       batch:
-        send_batch_size: 10000
-        timeout: 10s
+        #send_batch_size: 10000
+        #timeout: 10s
 
     exporters:
-      debug: {}
+      debug:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 10
 
     service:
       pipelines:
         traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+        logs:
           receivers: [otlp]
           processors: [memory_limiter, batch]
           exporters: [debug]
