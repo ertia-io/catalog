@@ -27,7 +27,7 @@ spec:
         check_interval: 1s
         limit_percentage: 90
         spike_limit_percentage: 50
-      batch:
+      batch: {}
         #send_batch_size: 10000
         #timeout: 10s
 
