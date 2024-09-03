@@ -27,12 +27,20 @@ spec:
         check_interval: 1s
         limit_percentage: 90
         spike_limit_percentage: 50
-      batch: {}
-        #send_batch_size: 10000
-        #timeout: 10s
+      batch:
+        send_batch_size: 1000
+        timeout: 1s
 
     exporters:
-      debug:
+      debug/traces:
+        verbosity: detailed
+        sampling_initial: 1
+        sampling_thereafter: 20
+      debug/metrics:
+        verbosity: detailed
+        sampling_initial: 1
+        sampling_thereafter: 20
+      debug/logs:
         verbosity: detailed
         sampling_initial: 5
         sampling_thereafter: 10
@@ -42,14 +50,14 @@ spec:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [debug]
+          exporters: [debug/traces]
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [debug]
+          exporters: [debug/metrics]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [debug]
+          exporters: [debug/logs]
 {{- end }}
 
