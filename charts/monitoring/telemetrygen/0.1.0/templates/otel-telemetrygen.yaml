@@ -64,9 +64,9 @@ spec:
           - /telemetrygen
           - metrics
           - --trace-id
-          - {{ include "randgen.randHex" 16 }}
+          - {{ include "randgen.randHex" 32 }}
           - --span-id
-          - {{ include "randgen.randHex" 8 }}
+          - {{ include "randgen.randHex" 16 }}
           - --otlp-insecure
           - >-
             --otlp-endpoint
