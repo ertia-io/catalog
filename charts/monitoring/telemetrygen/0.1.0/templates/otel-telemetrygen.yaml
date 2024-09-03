@@ -27,7 +27,7 @@ spec:
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      restartPolicy: Always
+      restartPolicy: {{ .Values.restartPolicy }}
       containers:
 {{- if .Values.traces.enabled }}
         - name: {{ .Chart.Name }}-telemetrygen-traces
@@ -44,8 +44,8 @@ spec:
             --otlp-endpoint
           - >-
             {{ $otlp_endpoint }}
-          - --duration=1h
-          - --rate=1
+          - --duration={{ .Values.traces.duration }}
+          - --rate={{ .Values.traces.rate }}
           - >-
             --otlp-attributes
           - >-
@@ -72,8 +72,8 @@ spec:
             --otlp-endpoint
           - >-
             {{ $otlp_endpoint }}
-          - --duration=1h
-          - --rate=1
+          - --duration={{ .Values.metrics.duration }}
+          - --rate={{ .Values.metrics.rate }}
           - >-
             --otlp-attributes
           - >-
@@ -90,16 +90,16 @@ spec:
           - /telemetrygen
           - logs
           - --trace-id
-          - {{ include "randgen.randHex" 16 }}
+          - {{ include "randgen.randHex" 32 }}
           - --span-id
-          - {{ include "randgen.randHex" 8 }}
+          - {{ include "randgen.randHex" 16 }}
           - --otlp-insecure
           - >-
             --otlp-endpoint
           - >-
             {{ $otlp_endpoint }}
-          - --duration=1h
-          - --rate=1
+          - --duration={{ .Values.logs.duration }}
+          - --rate={{ .Values.logs.rate }}
           - >-
             --body
           - >-
