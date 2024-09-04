@@ -11,10 +11,10 @@ spec:
       name: letsencrypt-production-issuer-account-key
     server: https://acme-v02.api.letsencrypt.org/directory
     solvers:
-    - http01:
-        ingress:
-          class: cilium
-          serviceType: ClusterIP
+      - http01:
+          ingress:
+            class: cilium
+            serviceType: ClusterIP
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -29,10 +29,10 @@ spec:
       name: letsencrypt-staging-issuer-account-key
     server: https://acme-staging-v02.api.letsencrypt.org/directory
     solvers:
-    - http01:
-        ingress:
-          class: cilium
-          serviceType: ClusterIP
+      - http01:
+          ingress:
+            class: cilium
+            serviceType: ClusterIP
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer

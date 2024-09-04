@@ -1,0 +1,7 @@
+issuers:
+  letsencrypt:
+    email: "platform@fabled.se"
+    enabled: true
+  zerossl:
+    email: "platform@fabled.se"
+    enabled: false

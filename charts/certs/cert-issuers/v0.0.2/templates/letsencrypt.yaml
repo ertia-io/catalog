@@ -1,20 +1,16 @@
+{{ if .Values.issuers.letsencrypt.enabled }}
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: zerossl-production
+  name: letsencrypt-production
   annotations:
     cert-manager.forked.se/disable-self-check: "false"
 spec:
   acme:
-    email: jasmin.beharic@fabled.se
+    email: {{ .Values.issuers.letsencrypt.email }}
     privateKeySecretRef:
-      name: zero-ssl-production
-    server: https://acme.zerossl.com/v2/DV90
-    externalAccountBinding:
-      keyID: SuP46VywarNQQG5bPL79PQ
-      keySecretRef:
-        name: zero-ssl-secret
-        key: secret
+      name: letsencrypt-production-issuer-account-key
+    server: https://acme-v02.api.letsencrypt.org/directory
     solvers:
       - http01:
           ingress:
@@ -24,20 +20,15 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: zerossl-staging
+  name: letsencrypt-staging
   annotations:
     cert-manager.forked.se/disable-self-check: "false"
 spec:
   acme:
-    email: jasmin.beharic@fabled.se
+    email: {{ .Values.issuers.letsencrypt.email }}
     privateKeySecretRef:
-      name: zero-ssl-staging
-    server: https://acme.zerossl.com/v2/DV90
-    externalAccountBinding:
-      keyID: SuP46VywarNQQG5bPL79PQ
-      keySecretRef:
-        name: zero-ssl-secret
-        key: secret
+      name: letsencrypt-staging-issuer-account-key
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
     solvers:
       - http01:
           ingress:
@@ -47,7 +38,7 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: zerossl-selfsigned
+  name: letsencrypt-selfsigned
 spec:
   selfSigned: {}
 #---
@@ -58,4 +49,4 @@ spec:
 #spec:
 #  ca:
 #    secretName: mkcert-issuer
-
+{{ end }}
