@@ -36,7 +36,7 @@ config:
 {{- range .Values.router.routingList }}
         - value: {{ . }}
           exporters:
-            - otel/{{ . }}
+            - otlp/{{ . }}
 {{- end }}
 {{- end }}
 
