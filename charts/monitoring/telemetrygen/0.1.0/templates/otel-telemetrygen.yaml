@@ -1,5 +1,7 @@
 {{- if .Values.enabled -}}
 {{- $otlp_endpoint := .Values.otlpEndpoint | required ".Values.otlpEndpoint is required!" -}}
+{{- $trace_id := include "randgen.randHex" 32 -}}
+{{- $span_id := include "randgen.randHex" 16 -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,11 +32,16 @@ spec:
       restartPolicy: {{ .Values.restartPolicy }}
       containers:
 {{- if .Values.traces.enabled }}
-        - name: {{ .Chart.Name }}-telemetrygen-traces
+        - name: {{ .Chart.Name }}-traces
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: MY_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command:
           - /telemetrygen
@@ -49,24 +56,33 @@ spec:
           - >-
             --otlp-attributes
           - >-
-            k8s.container.name="{{ .Chart.Name }}-telemetrygen"
+            k8s.container.name="{{ .Chart.Name }}-traces"
+          - >-
+            --otlp-attributes
+          - >-
+            k8s.pod.uid="$(MY_POD_UID)"
           - --service
           - telemetrygen
 {{- end }}
 {{- if .Values.metrics.enabled }}
-        - name: {{ .Chart.Name }}-telemetrygen-metrics
+        - name: {{ .Chart.Name }}-metrics
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: MY_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command:
           - /telemetrygen
           - metrics
           - --trace-id
-          - {{ include "randgen.randHex" 32 }}
+          - {{ $trace_id }}
           - --span-id
-          - {{ include "randgen.randHex" 16 }}
+          - {{ $span_id }}
           - --otlp-insecure
           - >-
             --otlp-endpoint
@@ -77,22 +93,31 @@ spec:
           - >-
             --otlp-attributes
           - >-
-            k8s.container.name="{{ .Chart.Name }}-telemetrygen"
+            k8s.container.name="{{ .Chart.Name }}-metrics"
+          - >-
+            --otlp-attributes
+          - >-
+            k8s.pod.uid="$(MY_POD_UID)"
 {{- end }}
 {{- if .Values.logs.enabled }}
-        - name: {{ .Chart.Name }}-telemetrygen-logs
+        - name: {{ .Chart.Name }}-logs
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: MY_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command:
           - /telemetrygen
           - logs
           - --trace-id
-          - {{ include "randgen.randHex" 32 }}
+          - {{ $trace_id }}
           - --span-id
-          - {{ include "randgen.randHex" 16 }}
+          - {{ $span_id }}
           - --otlp-insecure
           - >-
             --otlp-endpoint
@@ -100,6 +125,14 @@ spec:
             {{ $otlp_endpoint }}
           - --duration={{ .Values.logs.duration }}
           - --rate={{ .Values.logs.rate }}
+          - >-
+            --otlp-attributes
+          - >-
+            k8s.container.name="{{ .Chart.Name }}-logs"
+          - >-
+            --otlp-attributes
+          - >-
+            k8s.pod.uid="$(MY_POD_UID)"
           - >-
             --body
           - >-
