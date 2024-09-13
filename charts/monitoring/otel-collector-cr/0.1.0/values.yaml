@@ -2,7 +2,14 @@
 
 collectorName: ""
 
-preset: debug
+# Can be one of "debug", "router"
+preset: ""
 
+router:
+  addDebugExporters: false
+  routingList: []
+    #- example-processor
+
+# Override spec
 spec: {}
 
