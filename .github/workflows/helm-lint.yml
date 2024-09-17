@@ -1,0 +1,27 @@
+name: Helm Lint
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "charts/**"
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Find and Lint Helm Charts
+        run: |
+          find . -type f -name 'Chart.yaml' -exec dirname {} \; | while read chart; do
+            helm lint "$chart" --with-subcharts
+            echo " "
+          done
