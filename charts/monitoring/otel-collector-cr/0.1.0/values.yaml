@@ -2,13 +2,23 @@
 
 collectorName: ""
 
-# Can be one of "debug", "router"
+# Can be one of "debug", "router", "processor".
 preset: ""
 
 router:
   addDebugExporters: false
   routingList: []
     #- example-processor
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 90
+    spike_limit_percentage: 50
+  batch:
+    send_batch_size: 1000
+    send_batch_max_size: 1000
+    timeout: 1s
 
 # Override spec
 spec: {}

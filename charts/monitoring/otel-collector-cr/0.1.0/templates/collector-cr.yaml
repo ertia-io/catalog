@@ -12,13 +12,20 @@ metadata:
 
 spec:
 {{- if eq .Values.preset "router" }}
-{{- $baseConfig := include "otel-collector-cr.routerBaseConfig" . | fromYaml -}}
+{{- $baseConfig := include "otel-collector-cr.routerBaseConfig" . | fromYaml }}
 {{- $mergedConfig := mustMergeOverwrite (dict) .Values.spec $baseConfig }}
 {{ toYaml $mergedConfig | indent 2 }}
+
 {{- else if eq .Values.preset "debug" }}
-{{- $baseConfig := include "otel-collector-cr.debugBaseConfig" . | fromYaml -}}
-{{- $mergedConfig := mustMergeOverwrite (dict) .Values.spec $baseConfig -}}
+{{- $baseConfig := include "otel-collector-cr.debugBaseConfig" . | fromYaml }}
+{{- $mergedConfig := mustMergeOverwrite (dict) .Values.spec $baseConfig }}
 {{ toYaml $mergedConfig | indent 2 }}
+
+{{- else if eq .Values.preset "processor" }}
+{{- $baseConfig := include "otel-collector-cr.processorBaseConfig" . | fromYaml }}
+{{- $mergedConfig := mustMergeOverwrite (dict) .Values.spec $baseConfig }}
+{{ toYaml $mergedConfig | indent 2 }}
+
 {{- else }}
 {{ toYaml .Values.spec | indent 2 }}
 {{- end }}
