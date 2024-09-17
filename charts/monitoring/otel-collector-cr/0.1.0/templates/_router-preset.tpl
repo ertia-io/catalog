@@ -17,8 +17,8 @@ config:
       limit_percentage: 90
       spike_limit_percentage: 50
     batch:
-      send_batch_size: 8192
-      send_batch_max_size: 8192
+      send_batch_size: 1000
+      send_batch_max_size: 1000
       timeout: 1s
 {{- if .Values.router.routingList }}
     routing:
