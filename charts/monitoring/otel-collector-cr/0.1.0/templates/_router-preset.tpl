@@ -20,8 +20,10 @@ config:
       send_batch_size: 1000
       send_batch_max_size: 1000
       timeout: 1s
+  processors:
 {{- if .Values.router.routingList }}
     routing:
+      error_mode: ignore
       default_exporters:
         - otlp/default-processor
 {{- if .Values.router.addDebugExporters }}
@@ -29,12 +31,11 @@ config:
         - otlp/debug-metrics
         - otlp/debug-logs
 {{- end }}
-      error_mode: ignore
-      attribute_source: resource
-      from_attribute: 'k8s.pod.label.logging.ertia.io/otel-processor-name'
       table:
 {{- range .Values.router.routingList }}
-        - value: {{ . }}
+        - statement: |
+            route() where
+            resource.attributes["k8s.pod.label.logging.ertia.io/otel-processor-name"] == "{{ . }}"
           exporters:
             - otlp/{{ . }}
 {{- end }}
