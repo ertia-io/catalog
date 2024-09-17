@@ -20,7 +20,6 @@ config:
       send_batch_size: 1000
       send_batch_max_size: 1000
       timeout: 1s
-  processors:
 {{- if .Values.router.routingList }}
     routing:
       error_mode: ignore
