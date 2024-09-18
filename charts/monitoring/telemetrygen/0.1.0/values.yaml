@@ -21,15 +21,15 @@ restartPolicy: Always
 
 traces:
   enabled: true
-  duration: 10m
+  duration: 15m
   rate: 1
 metrics:
   enabled: true
-  duration: 10m
+  duration: 15m
   rate: 1
 logs:
   enabled: true
-  duration: 10m
+  duration: 15m
   rate: 1
   body: |-
     {"message": "Default log message..."}
