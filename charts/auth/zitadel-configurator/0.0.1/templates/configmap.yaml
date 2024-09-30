@@ -1,0 +1,440 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ include "zitadelConfigurator.fullname" . }}"
+  labels:
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: configurator
+    {{- with .Values.configMap.annotations }}
+  annotations:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  zitadel-configurator: |-
+    #!/bin/sh
+
+    {{ if .Values.job.debug }}
+    DEBUG="true"
+    {{ else }}
+    DEBUG="false"
+    {{ end }}
+
+    apk add --no-cache \
+      curl \
+      jq \
+      openssl \
+      coreutils >/dev/null
+
+    CUSTOM_DOMAIN={{ include "zitadelConfigurator.customDomain" . }}
+
+    # Get the Access Token using the Service Account data
+    SERVICE_ACCOUNT_JSON_PATH="/config/serviceaccount/{{ .Values.zitadelserviceAccountJsonPath }}"
+
+    if [ ! -f "$SERVICE_ACCOUNT_JSON_PATH" ]; then
+      echo "Service account file not found: $SERVICE_ACCOUNT_JSON_PATH"
+      exit 1
+    fi
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Using custom domain: $CUSTOM_DOMAIN"
+      echo "Service account path: $SERVICE_ACCOUNT_JSON_PATH"
+    fi
+
+    echo "Creating Zitadel Personal Access Token..."
+
+    CURRENT_UTC_TIMESTAMP="$(date +%s)"
+    EXPIRATION_UTC_TIMESTAMP="$(($CURRENT_UTC_TIMESTAMP + 864000))" # 10 minutes
+
+    KEY_ID="$(jq -r .keyId <"$SERVICE_ACCOUNT_JSON_PATH")"
+    KEY="$(jq -r .key <"$SERVICE_ACCOUNT_JSON_PATH")"
+    USER_ID="$(jq -r .userId <"$SERVICE_ACCOUNT_JSON_PATH")"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Key ID: $KEY_ID"
+      echo "User ID: $USER_ID"
+      echo "Key: $KEY"
+    fi
+
+    HEADER="$(printf "%s" '{"alg": "RS256", "kid": "'"${KEY_ID}"'", "typ": "JWT"}' | tr -d '\n' | tr -d '\r' | base64 -w 0 | tr +/ -_ | tr -d '=')"
+    PAYLOAD="$(printf "%s" '{"iss": "'"${USER_ID}"'", "sub": "'"${USER_ID}"'", "aud": "'"${CUSTOM_DOMAIN}"'", "iat": '"${CURRENT_UTC_TIMESTAMP}"', "exp": '"${EXPIRATION_UTC_TIMESTAMP}"'}' | tr -d '\n' | tr -d '\r' | base64 -w 0 | tr +/ -_ | tr -d '=')"
+    PAYLOAD_HEADER="$(printf "%s" "$HEADER" "." "$PAYLOAD")"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Header: $(printf "%s" '{"alg": "RS256", "kid": "'"${KEY_ID}"'", "typ": "JWT"}')"
+      echo "Header base64: $HEADER"
+      echo "Payload: $(printf "%s" '{"iss": "'"${USER_ID}"'", "sub": "'"${USER_ID}"'", "aud": "'"${CUSTOM_DOMAIN}"'", "iat": '"${CURRENT_UTC_TIMESTAMP}"', "exp": '"${EXPIRATION_UTC_TIMESTAMP}"'}')"
+      echo "Payload base64: $PAYLOAD"
+      echo "Payload.Header base64: $PAYLOAD_HEADER"
+    fi
+
+    temp_private_key_file="$(mktemp)"
+    printf "%s" "$KEY" >"$temp_private_key_file"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "temp_private_key_file: $temp_private_key_file"
+      echo "temp_private_key_file content: $(cat $temp_private_key_file)"
+    fi
+
+    SIGNATURE="$(printf "%s" "$PAYLOAD_HEADER" | openssl dgst -sign "$temp_private_key_file" | base64 -w 0 | tr +/ -_ | tr -d '=' | tr -d '\n' | tr -d '\r')"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Signature: $SIGNATURE"
+    fi
+
+    rm "$temp_private_key_file"
+
+    JWT_TOKEN="$(printf "%s" "$PAYLOAD_HEADER" "." "$SIGNATURE")"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "JWT token: $JWT_TOKEN"
+    fi
+
+    OAUTH_TOKEN_RESPONSE="""$(
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/oauth/v2/token" \
+        --header "Content-Type: application/x-www-form-urlencoded" \
+        --data grant_type='urn:ietf:params:oauth:grant-type:jwt-bearer' \
+        --data scope='openid profile urn:zitadel:iam:org:project:id:zitadel:aud' \
+        --data "assertion=$JWT_TOKEN"
+    )"""
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "$OAUTH_TOKEN_RESPONSE"
+    fi
+
+    ACCESS_TOKEN="$(echo $OAUTH_TOKEN_RESPONSE | jq -r .access_token)"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Access token: $ACCESS_TOKEN"
+    fi
+
+    {{ if .Values.zitadelAction.enabled }}
+    # Create an Action to increment the OIDC response with the user groups
+    data='{
+      "query": {
+        "offset": "0",
+        "limit": 100,
+        "asc": true
+      },
+      "sortingColumn": "ACTION_FIELD_NAME_UNSPECIFIED",
+      "queries": [
+        {
+          "actionNameQuery": {
+            "name": {{ quote .Values.zitadelAction.name }},
+            "method": "TEXT_QUERY_METHOD_EQUALS"
+          }
+        }
+      ]
+    }'
+
+    response="$(
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/management/v1/actions/_search" \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer $ACCESS_TOKEN" \
+        --data "$(echo $data | jq)"
+    )"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "$response"
+    fi
+
+    action_id="$(echo $response | jq 'if .result then .result[0].id else "" end')"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Action ID: $action_id"
+    fi
+
+    if [ -z "$action_id" ] || [ "$action_id" == '""' ]; then
+      echo "Creating Zitadel Action..."
+
+      data='{
+        "name": {{ quote .Values.zitadelAction.name }},
+        "script": {{ .Values.zitadelAction.script | replace "\n" " " | quote }},
+        "timeout": {{ quote .Values.zitadelAction.timeout }},
+        "allowedToFail": {{ .Values.zitadelAction.allowedToFail }}
+      }'
+
+      response="$(
+        curl --silent \
+          --request POST \
+          --url "$CUSTOM_DOMAIN/management/v1/actions" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/json" \
+          --header "Authorization: Bearer $ACCESS_TOKEN" \
+          --data "$(echo $data | jq)"
+      )"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "$response"
+      fi
+
+      action_id="$(echo $response | jq .id)"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "Created action ID: $action_id"
+      fi
+
+      data='{
+        "actionIds": [
+          '"$action_id"'
+        ]
+      }'
+
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/management/v1/flows/2/trigger/4" \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer $ACCESS_TOKEN" \
+        --data "$(echo $data | jq)"
+
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/management/v1/flows/2/trigger/5" \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer $ACCESS_TOKEN" \
+        --data "$(echo $data | jq)"
+    fi
+    {{ end }}
+
+    # Create an Application
+    data='{
+      "query": {
+        "offset": "0",
+        "limit": 100,
+        "asc": true
+      },
+      "queries": [
+        {
+          "nameQuery": {
+            "name": {{ quote .Values.zitadelProject.name }},
+            "method": "TEXT_QUERY_METHOD_EQUALS"
+          }
+        }
+      ]
+    }'
+
+    response="$(
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/management/v1/projects/_search" \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer $ACCESS_TOKEN" \
+        --data "$(echo $data | jq)"
+    )"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "$response"
+    fi
+
+    project_id="$(echo $response | jq -r 'if .result then .result[0].id else "" end')"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Project ID: $project_id"
+    fi
+
+    if [ -z "$project_id" ] || [ "$project_id" == '""' ]; then
+      {{ if .Values.zitadelProject.enabled }}
+      echo "Creating Zitadel Project..."
+
+      data='{
+        "name": {{ quote .Values.zitadelProject.name }},
+        "projectRoleAssertion": {{ .Values.zitadelProject.projectRoleAssertion }},
+        "projectRoleCheck": {{ .Values.zitadelProject.projectRoleCheck }},
+        "hasProjectCheck": {{ .Values.zitadelProject.hasProjectCheck }},
+        "privateLabelingSetting": "PRIVATE_LABELING_SETTING_UNSPECIFIED"
+      }'
+
+      response="$(
+        curl --silent \
+          --request POST \
+          --url "$CUSTOM_DOMAIN/management/v1/projects" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/json" \
+          --header "Authorization: Bearer $ACCESS_TOKEN" \
+          --data "$(echo $data | jq)"
+      )"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "$response"
+      fi
+
+      project_id="$(echo $response | jq -r .id)"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "Created project ID: $project_id"
+      fi
+      {{ end }}
+
+      {{ if .Values.zitadelProjectRoles.enabled }}
+      echo "Creating Zitadel Roles..."
+
+      data='{
+        "roleKey": "{{ .Values.zitadelProjectRoles.prefix }}:admin",
+        "displayName": "{{ .Values.zitadelProjectRoles.prefix }}:admin"
+      }'
+
+      response="$(
+        curl --silent \
+          --request POST \
+          --url "$CUSTOM_DOMAIN/management/v1/projects/$project_id/roles" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/json" \
+          --header "Authorization: Bearer $ACCESS_TOKEN" \
+          --data "$(echo $data | jq)"
+      )"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "$response"
+      fi
+
+      data='{
+        "roleKey": "{{ .Values.zitadelProjectRoles.prefix }}:view",
+        "displayName": "{{ .Values.zitadelProjectRoles.prefix }}:view"
+      }'
+
+      response="$(
+        curl --silent \
+          --request POST \
+          --url "$CUSTOM_DOMAIN/management/v1/projects/$project_id/roles" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/json" \
+          --header "Authorization: Bearer $ACCESS_TOKEN" \
+          --data "$(echo $data | jq)"
+      )"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "$response"
+      fi
+    fi
+    {{ end }}
+
+    {{ if .Values.zitadelApplication.enabled }}
+    echo "Creating Zitadel Application..."
+
+    data='{
+      "query": {
+        "offset": "0",
+        "limit": 100,
+        "asc": true
+      },
+      "queries": [
+        {
+          "nameQuery": {
+            "name": {{ quote .Values.zitadelApplication.name }},
+            "method": "TEXT_QUERY_METHOD_EQUALS"
+          }
+        }
+      ]
+    }'
+
+    response="$(
+      curl --silent \
+        --request POST \
+        --url "$CUSTOM_DOMAIN/management/v1/projects/$project_id/apps/_search" \
+        --header "Content-Type: application/json" \
+        --header "Accept: application/json" \
+        --header "Authorization: Bearer $ACCESS_TOKEN" \
+        --data "$(echo $data | jq)"
+    )"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "$response"
+    fi
+
+    application_id="$(echo $response | jq -r 'if .result then .result[0].id else "" end')"
+
+    if [ "$DEBUG" == "true" ]; then
+      echo "Application ID: $application_id"
+    fi
+
+    client_id=""
+    client_secret=""
+
+    if [ -z "$application_id" ] || [ "$application_id" == '""' ]; then
+      data='{
+        "name": {{ quote .Values.zitadelApplication.name }},
+        "redirectUris": [
+          {{- range $index, $uri := .Values.zitadelApplication.redirectUris }}
+            {{- if $index }},{{ end }}"{{ $uri }}"
+          {{- end -}}
+        ],
+        "responseTypes": [
+          {{- range $index, $type := .Values.zitadelApplication.responseTypes }}
+            {{- if $index }},{{ end }}"{{ $type }}"
+          {{- end -}}
+        ],
+        "grantTypes": [
+          {{- range $index, $grant := .Values.zitadelApplication.grantTypes }}
+            {{- if $index }},{{ end }}"{{ $grant }}"
+          {{- end -}}
+        ],
+        "appType": {{ quote .Values.zitadelApplication.appType }},
+        "authMethodType": {{ quote .Values.zitadelApplication.authMethodType }},
+        "postLogoutRedirectUris": [
+          {{- range $index, $uri := .Values.zitadelApplication.postLogoutRedirectUris }}
+            {{- if $index }},{{ end }}"{{ $uri }}"
+          {{- end -}}
+        ],
+        "version": {{ quote .Values.zitadelApplication.version }},
+        "devMode": {{ .Values.zitadelApplication.devMode }},
+        "accessTokenType": {{ quote .Values.zitadelApplication.accessTokenType }},
+        "accessTokenRoleAssertion": {{ .Values.zitadelApplication.accessTokenRoleAssertion }},
+        "idTokenRoleAssertion": {{ .Values.zitadelApplication.idTokenRoleAssertion }},
+        "idTokenUserinfoAssertion": {{ .Values.zitadelApplication.idTokenUserinfoAssertion }},
+        "clockSkew": {{ quote .Values.zitadelApplication.clockSkew }},
+        "skipNativeAppSuccessPage": {{ .Values.zitadelApplication.skipNativeAppSuccessPage }}
+      }'
+
+      response="$(
+        curl --silent \
+          --request POST \
+          --url "$CUSTOM_DOMAIN/management/v1/projects/$project_id/apps/oidc" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/json" \
+          --header "Authorization: Bearer $ACCESS_TOKEN" \
+          --data "$(echo $data | jq)"
+      )"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "$response"
+      fi
+
+      client_id="$(echo $response | jq -r .clientId)"
+      client_secret="$(echo $response | jq -r .clientSecret)"
+
+      if [ "$DEBUG" == "true" ]; then
+        echo "Client ID: $client_id"
+        echo "Client Secret: $client_secret"
+      fi
+
+      {{ if .Values.zitadelApplicationSecret.enabled }}
+      # Create Zitadel Application secret with Client ID and Client Secret
+      echo "Creating Zitadel Application Secret..."
+
+      curl -s -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/kubectl
+
+      kubectl get secrets -n {{ .Release.Namspace | default "auth" }} {{ .Values.zitadelApplicationSecret.name }} >/dev/null
+
+      if [ "$?" == "0" ]; then
+        echo "Secret {{ .Values.zitadelApplicationSecret.name }} already exists in namespace {{ .Release.Namspace | default "auth" }}. Recreating..."
+
+        kubectl delete secret -n {{ .Release.Namspace | default "auth" }} {{ .Values.zitadelApplicationSecret.name }} >/dev/null
+      fi
+
+      kubectl create secret generic {{ .Values.zitadelApplicationSecret.name }} \
+        --namespace {{ .Release.Namspace | default "auth" }} \
+        --from-literal=client_id="$client_id" \
+        --from-literal=client_secret="$client_secret"
+      {{ end }}
+    fi
+    {{ end }}

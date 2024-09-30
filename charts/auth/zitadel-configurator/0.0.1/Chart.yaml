@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: "3.20"
+description: A Helm chart for ZITADEL configurator
+icon: https://fabled.se/img/cat_logo.svg
+kubeVersion: ">= 1.21.0-0"
+maintainers:
+  - email: platform@fabled.se
+    name: zitadel-configurator
+    url: https://fabled.se
+name: zitadel-configurator
+type: application
+version: 0.0.1
