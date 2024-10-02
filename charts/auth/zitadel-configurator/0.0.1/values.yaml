@@ -1,0 +1,137 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+
+zitadelCustomDomain: https://id.demo.ertia.cloud
+
+zitadelServiceAccountSecretName: zitadel-admin-sa
+zitadelserviceAccountJsonPath: zitadel-admin-sa.json
+
+zitadelAction:
+  enabled: true
+  name: groupsClaim
+  script: |
+    function groupsClaim(ctx, api) {
+      if (ctx.v1.user.grants === undefined || ctx.v1.user.grants.count == 0) {
+        return;
+      }
+
+      let grants = [];
+
+      ctx.v1.user.grants.grants.forEach(claim => {
+        claim.roles.forEach(role => {
+          grants.push(role);
+        });
+      });
+
+      api.v1.claims.setClaim('groups', grants);
+    }
+  timeout: 10s
+  allowedToFail: true
+
+zitadelProject:
+  enabled: true
+  name: Kubernetes
+  projectRoleAssertion: true
+  projectRoleCheck: true
+  hasProjectCheck: true
+
+zitadelProjectRoles:
+  enabled: true
+  prefix: oidc
+
+zitadelApplication:
+  enabled: true
+  name: Single Sign-On
+  redirectUris:
+    - https://login.demo.ertia.cloud/callback
+  postLogoutRedirectUris:
+    - https://login.demo.ertia.cloud
+  responseTypes:
+    - OIDC_RESPONSE_TYPE_CODE
+  grantTypes:
+    - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+    - OIDC_GRANT_TYPE_REFRESH_TOKEN
+  appType: OIDC_APP_TYPE_WEB
+  version: OIDC_VERSION_1_0
+  authMethodType: OIDC_AUTH_METHOD_TYPE_BASIC
+  devMode: false
+  accessTokenType: OIDC_TOKEN_TYPE_BEARER
+  accessTokenRoleAssertion: true
+  idTokenRoleAssertion: true
+  idTokenUserinfoAssertion: true
+  clockSkew: 1s
+  skipNativeAppSuccessPage: true
+
+zitadelApplicationSecret:
+  enabled: true
+  name: zitadel-kubernetes-sso
+
+job:
+  debug: true
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "5"
+  resources: {}
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 100
+  extraContainers: []
+  podAnnotations: {}
+  podAdditionalLabels: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+configMap:
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "0"
+
+rbac:
+  enabled: true
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "0"
+
+serviceAccount:
+  enabled: true
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "0"
+  name: ""
+
+apiServerConfig:
+  enabled: true
+  config: |
+    --kube-apiserver-arg=oidc-issuer-url=https://login.demo.ertia.cloud
+    --kube-apiserver-arg=oidc-client-id=$client_id
+    --kube-apiserver-arg=oidc-username-claim=email
+    --kube-apiserver-arg=oidc-groups-claim=groups
+
+extraVolumes: []
+extraVolumeMounts: []
+
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  readOnlyRootFilesystem: false
+  privileged: true

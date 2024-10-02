@@ -1,10 +1,45 @@
-{{- if .Values.rbac.create }}
+{{- if .Values.serviceAccount.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "zitadelConfigurator.serviceAccountName" . }}
+  labels:
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+rules:
+  - apiGroups: [ "" ]
+    resources: [ "secrets" ]
+    verbs: [ "get", "create", "delete" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "zitadelConfigurator.serviceAccountName" . }}
+  labels:
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name:  {{ include "zitadelConfigurator.serviceAccountName" . }}
+roleRef:
+  kind: Role
+  name: {{ include "zitadelConfigurator.serviceAccountName" . }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- if .Values.rbac.enabled }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.rbac.namePrefix }}:admin
+  name: {{ .Values.zitadelProjectRoles.prefix }}:admin
   labels:
-    {{- include "dex-k8s-authenticator.labels" . | nindent 4 }}
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
   {{- with .Values.rbac.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -17,28 +52,28 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.rbac.namePrefix }}:admin
+  name: {{ .Values.zitadelProjectRoles.prefix }}:admin
   labels:
-    {{- include "dex-k8s-authenticator.labels" . | nindent 4 }}
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
   {{- with .Values.rbac.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 roleRef:
   kind: ClusterRole
-  name: {{ .Values.rbac.namePrefix }}:admin
+  name: {{ .Values.zitadelProjectRoles.prefix }}:admin
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: Group
-    name: {{ .Values.rbac.namePrefix }}:admin
+    name: {{ .Values.zitadelProjectRoles.prefix }}:admin
     apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.rbac.namePrefix }}:view
+  name: {{ .Values.zitadelProjectRoles.prefix }}:view
   labels:
-    {{- include "dex-k8s-authenticator.labels" . | nindent 4 }}
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
   {{- with .Values.rbac.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -202,19 +237,19 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.rbac.namePrefix }}:view
+  name: {{ .Values.zitadelProjectRoles.prefix }}:view
   labels:
-    {{- include "dex-k8s-authenticator.labels" . | nindent 4 }}
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
   {{- with .Values.rbac.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 roleRef:
   kind: ClusterRole
-  name: {{ .Values.rbac.namePrefix }}:view
+  name: {{ .Values.zitadelProjectRoles.prefix }}:view
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: Group
-    name: {{ .Values.rbac.namePrefix }}:view
+    name: {{ .Values.zitadelProjectRoles.prefix }}:view
     apiGroup: rbac.authorization.k8s.io
 {{- end }}

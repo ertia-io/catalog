@@ -1,0 +1,99 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "zitadelConfigurator.fullname" . }}"
+  labels:
+    {{- include "zitadelConfigurator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ include "zitadelConfigurator.fullname" . }}
+    {{- with .Values.job.annotations }}
+  annotations:
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: {{ .Values.job.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "zitadelConfigurator.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ include "zitadelConfigurator.fullname" . }}
+        {{- with .Values.job.podAdditionalLabels }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.job.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "zitadelConfigurator.serviceAccountName" . }}
+      enableServiceLinks: false
+      restartPolicy: OnFailure
+      containers:
+        - name: {{ include "zitadelConfigurator.fullname" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 14 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args: ["-c", "/config/script/{{ include "zitadelConfigurator.fullname" . }}"]
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            {{- with .Values.env }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+          - name: {{ .Values.zitadelServiceAccountSecretName }}
+            mountPath: /config/serviceaccount
+            readOnly: true
+          - name: {{ include "zitadelConfigurator.fullname" . }}
+            readOnly: true
+            mountPath: /config/script
+          {{- with .Values.extraVolumeMounts }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.job.resources | nindent 12 }}
+      {{- if .Values.job.extraContainers }}
+        {{- toYaml .Values.job.extraContainers | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: {{ .Values.zitadelServiceAccountSecretName }}
+        secret:
+          secretName: {{ .Values.zitadelServiceAccountSecretName }}
+          items:
+            - key: {{ .Values.zitadelserviceAccountJsonPath }}
+              path: {{ .Values.zitadelserviceAccountJsonPath }}
+          defaultMode: 0644
+      - name: {{ include "zitadelConfigurator.fullname" . }}
+        configMap: 
+          name: {{ include "zitadelConfigurator.fullname" . }}
+          items:
+            - key: {{ include "zitadelConfigurator.fullname" . }}
+              path: {{ include "zitadelConfigurator.fullname" . }}
+          defaultMode: 0755
+      {{- with .Values.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
