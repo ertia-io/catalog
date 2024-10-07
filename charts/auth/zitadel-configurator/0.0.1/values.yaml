@@ -31,7 +31,7 @@ zitadelAction:
         });
       });
 
-      api.v1.claims.setClaim('groups', grants);
+      api.v1.claims.setClaim(\'groups\', grants);
     }
   timeout: 10s
   allowedToFail: true
@@ -113,14 +113,6 @@ serviceAccount:
     helm.sh/hook-delete-policy: before-hook-creation
     helm.sh/hook-weight: "0"
   name: ""
-
-apiServerConfig:
-  enabled: true
-  config: |
-    --kube-apiserver-arg=oidc-issuer-url=https://login.demo.ertia.cloud
-    --kube-apiserver-arg=oidc-client-id=$client_id
-    --kube-apiserver-arg=oidc-username-claim=email
-    --kube-apiserver-arg=oidc-groups-claim=groups
 
 extraVolumes: []
 extraVolumeMounts: []
