@@ -1,0 +1,12 @@
+dependencies:
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 15.16.1
+- name: node-agent
+  repository: https://coroot.github.io/helm-charts
+  version: 0.1.94
+- name: clickhouse
+  repository: https://charts.bitnami.com/bitnami
+  version: 3.1.6
+digest: sha256:226f20716609abddb14a3256cc5a1a480d60fcf4e167d9a906939de70135916c
+generated: "2024-10-07T11:22:47.655657238Z"
