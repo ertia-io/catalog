@@ -1,0 +1,29 @@
+{{ template "chart.typeBadge" . }} {{ template "chart.versionBadge" . }}
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/victoriametrics)](https://artifacthub.io/packages/helm/victoriametrics/victoria-metrics-single)
+
+{{ template "chart.description" . }}
+
+## Prerequisites
+
+* Install the follow packages: ``git``, ``kubectl``, ``helm``, ``helm-docs``. See this [tutorial](https://docs.victoriametrics.com/helm/requirements/).
+* PV support on underlying infrastructure.
+
+## Chart Details
+
+This chart will do the following:
+
+* Rollout Victoria Metrics Single.
+
+{{ include "chart.installSection" . }}
+
+{{ include "chart.uninstallSection" . }}
+
+{{ include "chart.helmDocs" . }}
+
+## Parameters
+
+The following tables lists the configurable parameters of the chart and their default values.
+
+Change the values according to the need of the environment in ``victoria-metrics-single/values.yaml`` file.
+
+{{ template "chart.valuesTableHtml" . }}
