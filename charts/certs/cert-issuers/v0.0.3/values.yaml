@@ -1,0 +1,11 @@
+issuers:
+  letsencrypt:
+    email: "platform@fabled.se"
+    enabled: true
+    ingressClass: nginx
+    ingressServiceType: ClusterIP
+  zerossl:
+    email: "platform@fabled.se"
+    enabled: false
+    ingressClass: nginx
+    ingressServiceType: ClusterIP

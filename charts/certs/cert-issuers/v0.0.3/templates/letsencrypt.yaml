@@ -1,0 +1,52 @@
+{{ if .Values.issuers.letsencrypt.enabled }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-production
+  annotations:
+    cert-manager.forked.se/disable-self-check: "false"
+spec:
+  acme:
+    email: {{ .Values.issuers.letsencrypt.email }}
+    privateKeySecretRef:
+      name: letsencrypt-production-issuer-account-key
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+      - http01:
+          ingress:
+            class: {{ .Values.issuers.letsencrypt.ingressClass }}
+            serviceType: {{ .Values.issuers.letsencrypt.ingressServiceType }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  annotations:
+    cert-manager.forked.se/disable-self-check: "false"
+spec:
+  acme:
+    email: {{ .Values.issuers.letsencrypt.email }}
+    privateKeySecretRef:
+      name: letsencrypt-staging-issuer-account-key
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    solvers:
+      - http01:
+          ingress:
+            class: {{ .Values.issuers.letsencrypt.ingressClass }}
+            serviceType: {{ .Values.issuers.letsencrypt.ingressServiceType }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-selfsigned
+spec:
+  selfSigned: {}
+#---
+#apiVersion: cert-manager.io/v1
+#kind: ClusterIssuer
+#metadata:
+#  name: mkcert
+#spec:
+#  ca:
+#    secretName: mkcert-issuer
+{{ end }}
