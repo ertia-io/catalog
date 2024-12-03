@@ -10,7 +10,7 @@ metadata:
       {{- toYaml . | nindent 4 }}
     {{- end }}
 data:
-  zitadel-configurator: |-
+  {{ include "zitadelConfigurator.fullname" . }}: |-
     #!/bin/sh
 
     {{ if .Values.job.debug }}
