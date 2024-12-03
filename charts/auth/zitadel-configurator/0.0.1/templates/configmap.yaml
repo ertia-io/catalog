@@ -432,7 +432,7 @@ data:
       fi
 
       kubectl create secret generic {{ .Values.zitadelApplicationSecret.name }} \
-        --namespace {{ .Release.Namspace | default "auth" }} \
+        --namespace {{ .Values.zitadelApplicationSecret.namespace | .Release.Namspace }} \
         --from-literal=client_id="$client_id" \
         --from-literal=client_secret="$client_secret"
       {{ end }}
