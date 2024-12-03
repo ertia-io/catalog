@@ -46,6 +46,9 @@ zitadelProject:
 zitadelProjectRoles:
   enabled: true
   prefix: oidc
+  roles:
+    - admin
+    - view
 
 zitadelApplication:
   enabled: true
@@ -73,7 +76,7 @@ zitadelApplication:
 zitadelApplicationSecret:
   enabled: true
   name: zitadel-kubernetes-sso
-  namespace: auth
+  namespace: ""
 
 job:
   debug: true
