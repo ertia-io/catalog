@@ -423,16 +423,16 @@ data:
       chmod +x kubectl
       mv kubectl /usr/local/bin/kubectl
 
-      kubectl get secrets -n {{ .Release.Namspace | default "auth" }} {{ .Values.zitadelApplicationSecret.name }} >/dev/null
+      kubectl get secrets -n {{ .Values.zitadelApplicationSecret.namespace | .Release.Namespace }}  {{ .Values.zitadelApplicationSecret.name }} >/dev/null
 
       if [ "$?" == "0" ]; then
-        echo "Secret {{ .Values.zitadelApplicationSecret.name }} already exists in namespace {{ .Release.Namspace | default "auth" }}. Recreating..."
+        echo "Secret {{ .Values.zitadelApplicationSecret.name }} already exists in namespace {{ .Values.zitadelApplicationSecret.namespace | .Release.Namespace }}. Recreating..."
 
-        kubectl delete secret -n {{ .Release.Namspace | default "auth" }} {{ .Values.zitadelApplicationSecret.name }} >/dev/null
+        kubectl delete secret -n {{ .Values.zitadelApplicationSecret.namespace | .Release.Namespace }} {{ .Values.zitadelApplicationSecret.name }} >/dev/null
       fi
 
       kubectl create secret generic {{ .Values.zitadelApplicationSecret.name }} \
-        --namespace {{ .Values.zitadelApplicationSecret.namespace | .Release.Namspace }} \
+        --namespace {{ .Values.zitadelApplicationSecret.namespace | .Release.Namespace }} \
         --from-literal=client_id="$client_id" \
         --from-literal=client_secret="$client_secret"
       {{ end }}
