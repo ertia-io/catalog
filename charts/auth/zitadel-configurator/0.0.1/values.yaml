@@ -73,6 +73,7 @@ zitadelApplication:
 zitadelApplicationSecret:
   enabled: true
   name: zitadel-kubernetes-sso
+  namespace: auth
 
 job:
   debug: true
