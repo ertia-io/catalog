@@ -48,7 +48,9 @@ spec:
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
 
+      {{- if .Values.imagePullSecrets.nameOverride }}
       imagePullSecrets:
         - name: {{ include "helm.secretName" . }}
+      {{- end }}
 
       restartPolicy: Always
