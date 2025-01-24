@@ -1,4 +1,4 @@
-name: Helm Lint
+name: Lint Helm Charts
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - "charts/**"
   pull_request:
+  workflow_dispatch:
 
 jobs:
   lint:

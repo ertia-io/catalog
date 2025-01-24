@@ -1,0 +1,205 @@
+name: Publish Helm Charts to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "charts/**"
+  pull_request:
+    paths:
+      - "charts/**"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+  CHARTS_ROOT: charts
+
+jobs:
+  publish-pr-charts:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Login to GitHub Container Registry
+        shell: bash
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Install crane
+        shell: bash
+        run: |
+          CRANE_VERSION=v0.20.3
+          wget -qO- "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" | \
+          tar xz crane && \
+          sudo mv crane /usr/local/bin
+
+      - name: Login to GitHub Container Registry
+        shell: bash
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Find and publish modified charts
+        shell: bash
+        run: |
+          # Get list of modified files in the PR
+          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep '^charts/')
+
+          # Track processed charts to avoid duplicates
+          declare -A processed_charts
+
+          # Process each changed file
+          echo "$changed_files" | while read -r file; do
+            # Skip if not in charts directory or not a Chart.yaml
+            [[ "$file" == charts/* ]] || continue
+            
+            # Get the chart directory containing the changed file
+            chart_dir=$(dirname "$file")
+            while [[ "$chart_dir" != "charts"* ]] && [[ "$chart_dir" != "." ]]; do
+              if [[ -f "$chart_dir/Chart.yaml" ]]; then
+                break
+              fi
+              chart_dir=$(dirname "$chart_dir")
+            done
+            
+            # Skip if no Chart.yaml found
+            [[ -f "$chart_dir/Chart.yaml" ]] || continue
+            
+            # Get chart info
+            chart_path=$chart_dir
+            chart_name=$(yq eval '.name' "$chart_dir/Chart.yaml")
+            chart_version=$(yq eval '.version' "$chart_dir/Chart.yaml")
+            
+            # Skip if already processed
+            key="${chart_path}"
+            [[ ${processed_charts[$key]} ]] && continue
+            processed_charts[$key]=1
+            
+            # Get category from path
+            relative_path=${chart_dir#"$CHARTS_ROOT/"}
+            category=$(echo "$relative_path" | cut -d'/' -f1)
+            
+            # Set dev repository path
+            repo_path="${REGISTRY}/${OWNER}/catalog/dev/${category}"
+            
+            echo "Processing modified chart: ${category}/${chart_name}:${chart_version}"
+            echo "Dev repository path: ${repo_path}"
+            
+            # Package and push the chart
+            temp_dir=$(mktemp -d)
+            helm package "$chart_dir" -d "$temp_dir"
+            package_file=$(ls "$temp_dir"/*.tgz | head -n 1)
+            
+            # Push to dev repository
+            helm push "$package_file" "oci://${repo_path}"
+            
+            # Cleanup
+            rm -rf "$temp_dir"
+            echo "Successfully pushed ${repo_path}/${chart_name}:${chart_version}"
+          done
+
+  publish-charts:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Install crane
+        shell: bash
+        run: |
+          CRANE_VERSION=v0.20.3
+          wget -qO- "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" | \
+          tar xz crane && \
+          sudo mv crane /usr/local/bin
+
+      - name: Login to GitHub Container Registry
+        shell: bash
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Find and package charts
+        shell: bash
+        run: |
+          # Function to compare versions without 'v' prefix
+          version_gt() {
+            test "$(printf '%s\n' "$@" | sed 's/^v//' | sort -V | head -n 1)" != "$(echo "$1" | sed 's/^v//')"
+          }
+
+          # Function to get latest version maintaining original format
+          get_latest_version() {
+            local chart_path=$1
+            local current_latest=""
+            
+            find "${chart_path}" -mindepth 1 -maxdepth 1 -type d | while read -r version_dir; do
+              if [ -f "${version_dir}/Chart.yaml" ]; then
+                version=$(yq eval '.version' "${version_dir}/Chart.yaml")
+                if [ -z "$current_latest" ] || version_gt "$version" "$current_latest"; then
+                  current_latest="$version"
+                fi
+              fi
+            done
+            echo "$current_latest"
+          }
+
+          # Process each chart
+          declare -A chart_versions
+          find $CHARTS_ROOT -mindepth 2 -maxdepth 4 -type f -name 'Chart.yaml' | while read -r chart_file; do
+            chart_dir=$(dirname "$chart_file")
+            relative_path=${chart_dir#"$CHARTS_ROOT/"}
+            category=$(echo "$relative_path" | cut -d'/' -f1)
+            chart_name=$(yq eval '.name' "$chart_file")
+            chart_version=$(yq eval '.version' "$chart_file")
+            
+            repo_path="${REGISTRY}/${OWNER}/catalog/${category}"
+            
+            echo "Processing: ${category}/${chart_name}:${chart_version}"
+            echo "Repository path: ${repo_path}"
+            
+            # Package and push the chart
+            temp_dir=$(mktemp -d)
+            helm package "$chart_dir" -d "$temp_dir"
+            package_file=$(ls "$temp_dir"/*.tgz | head -n 1)
+            
+            # Push with version tag
+            helm push "$package_file" "oci://${repo_path}"
+            
+            # Check if this is the latest version
+            chart_key="${category}/${chart_name}"
+            chart_base_path=$(dirname "$chart_dir")
+            
+            if [ -z "${chart_versions[$chart_key]}" ]; then
+              latest_version=$(get_latest_version "$chart_base_path")
+              chart_versions[$chart_key]="$latest_version"
+              
+              if [ "$chart_version" = "$latest_version" ]; then
+                echo "Chart is latest version, creating additional latest tag"
+                helm push "$package_file" "oci://${repo_path}" -f
+              fi
+            fi
+            
+            # Cleanup
+            rm -rf "$temp_dir"
+            echo "Successfully pushed ${repo_path}/${chart_name}:${chart_version}"
+          done
