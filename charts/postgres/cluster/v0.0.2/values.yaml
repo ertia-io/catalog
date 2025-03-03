@@ -1,0 +1,19 @@
+replicas: 1
+
+secret:
+  username: ""
+  password: ""
+  database: ""
+
+s3:
+  enabled: false
+  destinationpath: s3://pg-backups
+  endpointURL: https://eu2.contabostorage.com
+  data: {}
+  wal: {}
+  secret:
+    username: ""
+    password: ""
+  restore:
+    destinationpath: s3://pg-backups-restore
+    endpointURL: https://eu2.contabostorage.com
