@@ -1,0 +1,86 @@
+# Example of PostgreSQL cluster
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: {{ .Release.Namespace }}
+ # annotations:
+  #  cnpg.io/skipEmptyWalArchiveCheck: 'enabled'  
+spec:
+  instances: {{ .Values.replicas }}
+  primaryUpdateStrategy: unsupervised
+  storage:
+    size: 1Gi
+  monitoring:
+    enablePodMonitor: true 
+
+  superuserSecret:
+    name: {{ .Release.Name }}
+  enableSuperuserAccess: true
+  
+#  bootstrap:
+#    initdb:
+#      database: app
+#      owner: app
+#      secret:
+#         name: app-secret
+
+{{ if .Values.s3.enabled }}
+  backup:
+    retentionPolicy: "14d"
+    barmanObjectStore:
+      destinationPath: {{ .Values.s3.destinationpath }}
+      endpointURL: {{ .Values.s3.endpointURL }}
+      {{ if .Values.s3.data }}
+      data:
+        {{ range $key, $val := .Values.s3.data }}
+        {{ $key }}: "{{ $val }}"
+        {{ end }}
+      {{ end }}
+      {{ if .Values.s3.wal }}
+      wal:
+        {{ range $key, $val := .Values.s3.wal }}
+        {{ $key }}: "{{ $val }}"
+        {{ end }}
+      {{ end }}
+      s3Credentials:
+        accessKeyId:
+          name: {{ .Release.Name }}-s3
+          key: username
+        secretAccessKey:
+          name: {{ .Release.Name }}-s3
+          key: password
+{{ end }}
+
+{{ if .Values.s3.enabled }}
+  externalClusters:
+    - name: postgres
+      barmanObjectStore:
+        destinationPath: {{ .Values.s3.restore.destinationpath }}
+        endpointURL: {{ .Values.s3.restore.endpointURL }}
+        s3Credentials:
+          accessKeyId:
+            name: {{ .Release.Name }}-s3
+            key: username
+          secretAccessKey:
+            name: {{ .Release.Name }}-s3
+            key: password
+        wal:
+          maxParallel: 8
+{{ end }}
+
+  #bootstrap:
+   # recovery:
+    #  source: postgres
+          
+  # Example of rolling update strategy:
+  # - unsupervised: automated update of the primary once all
+  #                 replicas have been upgraded (default)
+  # - supervised: requires manual supervision to perform
+  #               the switchover of the primary   
+
+
+#  resources:
+#    storage:
+#      request: 1Gi
+#  replicas: 3
