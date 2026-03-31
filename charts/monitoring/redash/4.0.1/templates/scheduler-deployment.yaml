@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redash.scheduler.fullname" . }}
+  labels:
+    {{- include "redash.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: {{ .Values.scheduler.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "redash.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        {{- include "redash.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: scheduler
+        {{- with .Values.scheduler.podLabels }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      {{- with .Values.scheduler.podAnnotations }}
+      annotations: {{ tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+    spec:
+      {{ with .Values.imagePullSecrets -}}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{ end -}}
+      serviceAccountName: {{ include "redash.serviceAccountName" . }}
+      securityContext: {{ toYaml .Values.scheduler.podSecurityContext | nindent 8 }}
+      {{- $initContainers := concat .Values.initContainers .Values.scheduler.initContainers }}
+      {{- with $initContainers }}
+      initContainers: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        {{- with .Values.scheduler.extraContainers -}}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ include "redash.name" . }}-scheduler
+          securityContext: {{ toYaml .Values.scheduler.securityContext | nindent 12 }}
+          image: {{ .Values.image.registry }}/{{ .Values.image.repo }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- $volumeMounts := concat .Values.volumeMounts .Values.scheduler.volumeMounts }}
+          {{- with $volumeMounts }}
+          volumeMounts: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          args:
+          {{- if or .Values.redis.enabled .Values.postgresql.enabled }}
+            - /bin/sh
+            - -c
+            - |
+              {{- if .Values.redis.enabled }}
+              if [ -n "${REDASH_REDIS_PASSWORD}" ]; then
+                export REDASH_REDIS_URL="redis://:${REDASH_REDIS_PASSWORD}@${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              else
+                export REDASH_REDIS_URL="redis://${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              fi
+              {{- end }}
+              {{- if .Values.postgresql.enabled }}
+              export REDASH_DATABASE_URL="postgresql://${REDASH_DATABASE_USER}:${REDASH_DATABASE_PASSWORD}@${REDASH_DATABASE_HOSTNAME}:${REDASH_DATABASE_PORT}/${REDASH_DATABASE_NAME}"
+              {{- end }}
+              exec /app/bin/docker-entrypoint scheduler
+          {{- else }}
+            - scheduler
+          {{- end }}
+          env:
+          {{- $envCtx := mergeOverwrite (deepCopy .) (dict "Values" (dict "env" .Values.scheduler.env)) -}}
+          {{- include "redash.env" $envCtx | nindent 12 }}
+          {{- with (include "redash.envFrom" .) }}
+          envFrom: {{ . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.scheduler.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.scheduler.livenessProbe }}
+          livenessProbe: {{ toYaml . | nindent 12 }}
+          {{- end }}
+      {{- $volumes := concat .Values.volumes .Values.scheduler.volumes }}
+      {{- with $volumes }}
+      volumes: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.tolerations }}
+      tolerations:
+      {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}

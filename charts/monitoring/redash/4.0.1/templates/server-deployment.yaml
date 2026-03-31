@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redash.fullname" . }}
+  labels:
+    {{- include "redash.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "redash.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        {{- include "redash.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        {{- with .Values.server.podLabels }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      {{- with .Values.server.podAnnotations }}
+      annotations: {{ tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+    spec:
+      {{ with .Values.imagePullSecrets -}}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{ end -}}
+      serviceAccountName: {{ include "redash.serviceAccountName" . }}
+      securityContext: {{ toYaml .Values.server.podSecurityContext | nindent 8 }}
+      {{- $initContainers := concat .Values.initContainers .Values.server.initContainers }}
+      {{- with $initContainers }}
+      initContainers: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        {{- with .Values.server.extraContainers -}}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ include "redash.name" . }}-server
+          securityContext: {{ toYaml .Values.server.securityContext | nindent 12 }}
+          image: {{ .Values.image.registry }}/{{ .Values.image.repo }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- $volumeMounts := concat .Values.volumeMounts .Values.server.volumeMounts }}
+          {{- with $volumeMounts }}
+          volumeMounts: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          args:
+          {{- if or .Values.redis.enabled .Values.postgresql.enabled }}
+            - /bin/sh
+            - -c
+            - |
+              {{- if .Values.redis.enabled }}
+              if [ -n "${REDASH_REDIS_PASSWORD}" ]; then
+                export REDASH_REDIS_URL="redis://:${REDASH_REDIS_PASSWORD}@${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              else
+                export REDASH_REDIS_URL="redis://${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              fi
+              {{- end }}
+              {{- if .Values.postgresql.enabled }}
+              export REDASH_DATABASE_URL="postgresql://${REDASH_DATABASE_USER}:${REDASH_DATABASE_PASSWORD}@${REDASH_DATABASE_HOSTNAME}:${REDASH_DATABASE_PORT}/${REDASH_DATABASE_NAME}"
+              {{- end }}
+              exec /app/bin/docker-entrypoint server
+          {{- else }}
+            - server
+          {{- end }}
+          env:
+          {{- $envCtx := mergeOverwrite (deepCopy .) (dict "Values" (dict "env" .Values.server.env)) -}}
+          {{- include "redash.env" $envCtx | nindent 12 }}
+          {{- with (include "redash.envFrom" .) }}
+          envFrom: {{ . | nindent 12 }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.server.httpPort }}
+          {{- $defaultProbe := dict "httpGet" (dict "path" "/ping" "port" .Values.server.httpPort) -}}
+          {{- with .Values.server.livenessProbe }}
+          livenessProbe: {{ deepCopy . | mergeOverwrite $defaultProbe | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.server.readinessProbe }}
+          readinessProbe: {{ deepCopy . | mergeOverwrite $defaultProbe | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.server.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+      {{- $volumes := concat .Values.volumes .Values.server.volumes -}}
+      {{- with $volumes }}
+      volumes: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}

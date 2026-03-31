@@ -1,0 +1,92 @@
+{{ range $workerName, $config := .Values.workers -}}
+{{- $workerConfig := mergeOverwrite (deepCopy $.Values.worker) $config }}
+{{- $context := mergeOverwrite (deepCopy $) (dict "workerName" $workerName)}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redash.worker.fullname" $context }}
+  labels: {{ include "redash.labels" $context | nindent 4 }}
+spec:
+  replicas: {{ $workerConfig.replicaCount }}
+  selector:
+    matchLabels: {{ include "redash.selectorLabels" $context | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "redash.selectorLabels" $context | nindent 8 }}
+        {{- with $workerConfig.podLabels }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      {{- with $workerConfig.podAnnotations }}
+      annotations: {{ tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+    spec:
+      {{ with $.Values.imagePullSecrets -}}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end -}}
+      serviceAccountName: {{ include "redash.serviceAccountName" $context }}
+      securityContext: {{ toYaml $workerConfig.podSecurityContext | nindent 8 }}
+      {{- with concat $.Values.initContainers $workerConfig.initContainers }}
+      initContainers: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        {{- with $workerConfig.extraContainers -}}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ include "redash.name" $context }}-{{ $workerName }}worker
+          securityContext: {{ toYaml $workerConfig.securityContext | nindent 12 }}
+          image: {{ $.Values.image.registry }}/{{ $.Values.image.repo }}:{{ $.Values.image.tag | default $.Chart.AppVersion }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+          {{- if or $.Values.redis.enabled $.Values.postgresql.enabled }}
+            - /bin/sh
+            - -c
+            - |
+              {{- if $.Values.redis.enabled }}
+              if [ -n "${REDASH_REDIS_PASSWORD}" ]; then
+                export REDASH_REDIS_URL="redis://:${REDASH_REDIS_PASSWORD}@${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              else
+                export REDASH_REDIS_URL="redis://${REDASH_REDIS_HOSTNAME}:${REDASH_REDIS_PORT}/${REDASH_REDIS_NAME}"
+              fi
+              {{- end }}
+              {{- if $.Values.postgresql.enabled }}
+              export REDASH_DATABASE_URL="postgresql://${REDASH_DATABASE_USER}:${REDASH_DATABASE_PASSWORD}@${REDASH_DATABASE_HOSTNAME}:${REDASH_DATABASE_PORT}/${REDASH_DATABASE_NAME}"
+              {{- end }}
+              exec /app/bin/docker-entrypoint worker
+          {{- else }}
+            - worker
+          {{- end }}
+          {{- $volumeMounts := concat $.Values.volumeMounts $workerConfig.volumeMounts }}
+          {{- with $volumeMounts }}
+          volumeMounts: {{ toYaml . | nindent 12 }}
+          {{- end -}}
+          {{- with $workerConfig.livenessProbe }}
+          livenessProbe: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+          {{- $envCtx := mergeOverwrite (deepCopy $) (dict "Values" (dict "env" $workerConfig.env)) -}}
+          {{- include "redash.env" $envCtx | nindent 12 }}
+          {{- with (include "redash.envFrom" $) }}
+          envFrom: {{ . | nindent 12 }}
+          {{- end }}
+          {{- with $workerConfig.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+      {{- $volumes := concat $.Values.volumes $workerConfig.volumes -}}
+      {{- with $volumes }}
+      volumes: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workerConfig.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workerConfig.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workerConfig.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workerConfig.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+{{- end }}
